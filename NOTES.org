@@ -1,0 +1,113 @@
+#+TITLE: Hacking Notes on Layouts and Bindings
+#+AUTHOR: Psionik K
+
+  This is an abbreviated re-index of the Elisp manual section on
+  [[info:elisp#Keymaps][Keymaps]].
+
+  This guide is not authoritative, and clarifications are appreciated
+  if you happen to be an expert and find yourself reading this.
+
+  An index of elisp forms is available in [[https://github.com/positron-solutions/posimacs-shortdocs][posimacs shortdocs]] under the
+  key-bindings group, although the provided shortdocs also now have
+  some bindings.
+
+** Keymap structure
+
+   Summary of [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Keymaps.html][keymap format]] section from the Elisp manual.
+
+   - All keymaps are lists, and the first element is just the symbol, =keymap=
+   - Some contain a chartable (full versus sparse keymap)
+   - Elements in the list of [[info:elisp#Format of Keymaps][many types]]
+   - Elements can be composed keymaps, of form =(keymap ... elements)=
+   - Parent keymaps start in the middle, after another =keymap= symbol followed by more elements.
+   - Binding elements can point to keymaps, implementing prefix
+     commands
+
+** Variables
+
+  - =global-map=
+  - =active-global-map= (usually same)
+
+  - =current-local-map= (buffer local)
+  - =minor-mode-map-alist=
+    Conses of enabling variable and the map
+  - =minor-mode-overriding-map-alist= (buffer local)
+    Same as minor mode map alist, but used by major modes (and users) to punch
+    minor modes.
+  - =emulation-mode-map-alists= Alist of alists.  Variable keys determine if
+    values are enabled.  Mostly for implementing modal systems, full rebind
+    schemes with lots of dynamic state.
+  - =overriding-local-map= (buffer local)
+  - =overriding-terminal-local-map= (terminal local)
+
+** Keymap behavior
+
+   This [[info:elisp#Searching Keymaps][lookup order]] pseudo-code describes keymap precedence.
+
+   =meta-prefix-char= should be left alone.  Messing with it is not a good
+   solution to any likely problem.
+
+** Functions
+
+  - =current-minor-mode-maps= Get the enabled minor modes, respects
+    =minor-mode-overriding-map-alist=
+
+*** Converting representations
+
+    - =kbd= will convert strings to representations acceped by
+      =define-key=
+    - =vconcat= will convert those representations into a vector,
+      which is frequently the literal you see when inspecting keymaps
+      or using the keymap-utils package
+    - =key-description= will convert vector representations back onto
+      something that =kbd= can understand, completing the round trip.
+
+      #+begin_src elisp
+
+        (key-description (vconcat (kbd "C-x"))) ; "C-x"
+
+      #+end_src
+
+***  What maps are active?
+
+    - =accessible-keymaps= can be called a variety of ways to see
+      which keymaps could still satisfy an incomplete &optional PREFIX
+      sequence starting in KEYMAP
+
+***  What does this key do?
+
+    - =key-binding= all maps
+    - =local-key-binding= local maps
+    - =minor-mode-key-binding= active minor mode maps
+    - =lookup-key= For looking at a specific map
+
+***  What is in this map?
+
+    - =map-keymap= map over all bindings with event type + binding as arguments.
+    - =keymap-parent=
+
+    - =use-global-map= sets a new global map.
+
+      *warning* Never set =global-map= to anything you didn't prepare well with a
+      full keymap, which has a charset so that =self-insert-command= and M-x work,
+      otherwise you will need to restart Emacs and perhaps fix your config with a
+      =emacs -q= etc.
+
+** Commands
+
+   The [[https://github.com/Wilfred/helpful][helpful package]] has some beneficial behaviors for inspecting keymaps in
+   normal Emacs workflows.
+
+   =helpful-key=
+   =describe-key= (less nice)
+
+   =describe-bindings= (pretty nice).  =helpful-variable= is also pretty good at
+   presenting the contents of keymaps compared to vanilla =describe-variable=.
+
+** Tarsius's Keymap Utilities
+
+   [[https://github.com/tarsius/keymap-utils/blob/master/keymap-utils.el][keymap-utils.el]] is a small package containing many implementations
+   for working with keymap types.  There are probably some
+   re-implementations as well that behave slightly differently.  In
+   particular, there is =kmu-remove-key= to completely remove keys
+   from both chartables and keymap lists

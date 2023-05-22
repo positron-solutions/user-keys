@@ -1,0 +1,200 @@
+#+TITLE: User-Keys
+#+AUTHOR: Psionik K
+#+PROPERTY: header-args :results silent
+
+#+HTML: <img src="./TODO.png" alt="Sequences consisting of C-c and a letter are the only sequences reserved for users.  (An error).">
+
+- Remove legacy keymap spam
+- Move keys that express ideas, such as =C-n=, coherently across multiple modes
+- See the current state of your preferred top-level sequences
+
+* Install User-Keys
+
+ #+begin_src elisp :eval never
+
+   (use-package user-keys) ; vanilla
+
+   ;; using elpaca's with explicit recipe
+   (use-package user-keys
+     :elpaca (user-keys :host github :repo "positron-solutions/user-keys"))
+
+   ;; straight with explicit recipe
+   (use-package user-keys
+     :straight (user-keys :type git :host github :repo "positron-solutions/user-keys"))
+
+   ;; or use manual load-path & require, you brave yak shaver
+
+ #+end_src
+
+* Use User-Keys
+
+  #+begin_src elisp :eval never
+
+    ;; Show the state of your preferred sequences in the current major
+    ;; mode.  Use this to find out which sequences you might want to bind
+    ;; next.
+    (user-keys-show-preferred)
+
+    ;; See a report of all "poor" bindings and the maps that bind them.
+    (user-keys-show-poor)
+
+  #+end_src
+
+* Contents
+:PROPERTIES:
+:TOC:      :include siblings :ignore this
+:END:
+:CONTENTS:
+- [[#other-packages][Other Packages]]
+- [[#motivation][Motivation]]
+- [[#long-term-goal][Long-Term Goal]]
+- [[#this-package-is-a-protest][This Package is a Protest]]
+- [[#correctly-communicating-about-commands-and-sequences][Correctly Communicating About Commands and Sequences]]
+- [[#contributing][Contributing]]
+- [[#acknowledgments][Acknowledgments]]
+:END:
+
+* Other Packages
+
+   Absolutely check out the newer modal packages such as [[https://github.com/meow-edit/meow][Meow]].  They
+   don't have a lot of pre-configured bindings, and this opens up room
+   to do crazy things.
+
+   - Completions frameworks alleviate the need for complex bindings
+   - Transient bindings (transient package) are a good way to present
+     context specific bindings such as for applications like magit
+   - Helpful presents bindings in a much better format when looking at
+     keymap variables
+   - Which-key is definitely more useful after cleaning out some
+     bindings
+   - Tree sitter is making more and more editing commands able to use
+     the structure of text you are working on
+
+   Not all of these packages have a clear best choice, so be sure to
+   research Emacs awesome and Reddit etc before adopting a
+   recommendation here.
+
+* Motivation
+
+  Tools like which-key and =describe-bindings= are less effective when
+  there are too many commands bound.  Many of the bindings are such
+  difficult sequences that even if you want to use the command, it's
+  faster via =M-x= completions or maybe you just rebind it than use it
+  in such a poor binding.
+
+  The timing of development was partly motivated by tree-sitter
+  adoption.  Because of tree-sitter, editing commands that are aware
+  of syntax boundaries will become common.  *The old keymaps based on
+  heuristic editing commands will need to evolve.* The influence of
+  the defaults on many ad-hoc conventions needs to be managed.
+
+* Long-Term Goal
+
+  Currently there are many ad-hoc conventions about which keys should
+  be bound to which kinds of commands.  =C-n= for =next-line= in the
+  default map is an example.  Moving this in all modes that express
+  their own =next-line= concept is tedious.  User-keys may later aim
+  to codify some of these abstractions so that the user can more
+  easily replace the shadowed and unshadowed versions of commands or
+  move their sequences around coherently.
+
+* Correctly Communicating About Commands and Sequences
+
+  Other users might say things like, "The C-x C-f command."  *This is wrong.*
+  There is no "C-x C-f" command.  There is a "C-x f" *key sequence* that is
+  *bound*, by default, to the *command* =find-file=.  This is a *binding*.
+
+  - Command names point to source code and can be used as fuel for hacking new
+    commands.
+  - Command names are named using frequent concepts from the [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Glossary.html][glossary]]
+  - Command names do not change when users rebind keys.  You can communicate
+    about commands no matter what bindings system another user has.
+  - Command names tell users more about what package they came from.
+
+  Unfortunately there seems to be no mechanism to find out what a key /was/
+  bound to in the default settings.  We can all use commands.  We cannot all
+  know what a binding means.
+
+  *Command names make you and other users more successful.
+  Communicate by saying command names, not key sequences.*
+
+* The C-c Convention is Completely Wrong
+
+  The [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Key-Binding-Conventions.html][elisp manual]] states that only the ~C-c~ prefix should be
+  respected by all major and minor modes. This means the user is
+  expected to bind all of their preferred top-level commands behind
+  just one *prefix* sequence.  Meanwhile countless packages add
+  bindings to high-value short key sequences just because the package
+  author felt like it or it would shadow a default that the user may
+  have reconfigured.
+
+  #+begin_quote
+
+  Don’t define C-c letter as a key in Lisp programs. Sequences
+  consisting of C-c and a letter (either upper or lower case; ASCII or
+  non-ASCII) are reserved for users; *they are the only sequences
+  reserved for users*, so do not block them.
+
+  #+end_quote
+
+  =C-c= was never a good idea.  It is the kind of choice that occurred
+  after far too much spam was protected by being legacy, a legacy that
+  was born less out of intentional design and more from a [[https://en.wikipedia.org/wiki/Ouija][ouija]] board
+  of mixed contributions.
+
+  There is no configuration option for certain conventions, such as
+  =C-n= usually selecting the next item in a list.  Because these
+  conventions exist but are not first class, changing the binding for
+  an idea found in multiple keymaps usually requires modifying
+  multiple keymaps.
+
+  Ultimately it seems many commands are bound only because a few users
+  wanted a shortcut at some point, possibly long ago.  Many of the
+  commands are of extremely low utility and only begin to make sense
+  if the user adopts a new range of behaviors.  Instead of letting the
+  user decide which of the commmands are useful and providing lots of
+  open space for the user to create new commands, many commands seem
+  bound "just in case."
+
+  Commands do no deserve bindings.  They are not entitled to them.  At
+  the very most, a package author should provide a keymap and then
+  tell the user how to bind that to a prefix.  We have absolutely
+  amazing command discovery these days, and spamming your commands
+  into keymaps is a terrible solution for communicating to the user
+  which of your commands are the most likely to be useful.  Stop
+  binding so many commands by default.  Publish a list in your package
+  usage documentation.
+
+  Furthermore, the culture of protecting legacy keymap pollution leads
+  to users communicating about bindings instead of commands.  Knowing
+  a command name leads users into elisp programming and customization.
+  Knowing bindings leads to archaic, esoteric anachronisms and lingo.
+  Living with =M-x= and completions frameworks grows knowledge.  Being
+  forced to sort through massive lists of bindings with many ad-hoc
+  conventions leads to user intimidation and a calcification of things
+  that never should have been allowed to become standards.
+
+* Contributing
+
+  [[./CONTRIBUTING.org][CONTRIBUTING]] contains instructions on using this repository's functionality.
+  A DCO and GPL3 license are included with this project.
+
+  Check the hacking [[./NOTES.org][NOTES]] document for some help getting started
+  hacking on keymaps and bindings.  The keymap data structures
+  themselves are a little bit unwieldy.
+
+  Do consider buying me a glass of champagne if you find this timer amusing.
+  Github Sponsors is configured.
+
+* Acknowledgments
+
+  Thanks to [[https://github.com/tarsius][Tarsius]] for publishing the keymap-utils package to MELPA.
+  Some of the built-in functions for exploring keymaps in Emacs were
+  not immediately appropriate for implementing all of the ideas in
+  user-keys.  =keymap-map-keys= seemed to provide a buffet of data
+  types and structures.
+
+# Local Variables:
+# before-save-hook: (lambda () (when (require 'org-make-toc nil t) (org-make-toc)))
+# org-make-toc-link-type-fn: org-make-toc--link-entry-github
+# End:
