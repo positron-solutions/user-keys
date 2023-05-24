@@ -153,6 +153,20 @@ considered preferred sequences."
                                 major-mode-keymaps))))))))
     major-mode-keymaps))
 
+(defun user-keys--minor-mode-keymaps (&optional active-only)
+  "Return a list of all minor mode keymaps.
+Optional ACTIVE-ONLY argument will control if only active maps
+are returned."
+  (-non-nil
+   (--map (let* ((mode-name (car it))
+                 (mode-map-name (derived-mode-map-name mode-name)))
+            (if (and (or (not active-only) (symbol-value mode-name))
+                     (boundp mode-map-name)
+                     (keymapp (symbol-value mode-map-name)))
+                mode-map-name
+              nil))
+          minor-mode-map-alist)))
+
 (defun user-keys--other-maps(keymaps)
   "Return a list of all keymaps not in KEYMAPS.
 KEYMAP-LISTS is a list of lists of map symbols."

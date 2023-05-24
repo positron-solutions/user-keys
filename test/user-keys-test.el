@@ -49,6 +49,11 @@
   (should (not (member 'prog-mode-map (user-keys--major-mode-keymaps))))
   (should (not (member 'global-map (user-keys--major-mode-keymaps)))))
 
+(ert-deftest user-keys--minor-mode-maps-test ()
+  (should (member 'rectangle-mark-mode-map (user-keys--minor-mode-keymaps)))
+  (should (not (member 'rectangle-mark-mode-map (user-keys--minor-mode-keymaps t))))
+  (should (not (member 'prog-mode-map (user-keys--minor-mode-keymaps)))))
+
 (ert-deftest user-keys--other-mode-maps-test ()
   (should (not (member 'emacs-lisp-mode-map
                        (user-keys--other-maps
