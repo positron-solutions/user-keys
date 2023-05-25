@@ -187,6 +187,27 @@ KEYMAP-LISTS is a list of lists of map symbols."
                          (puthash a a other-keymaps)))))
     (hash-table-keys other-keymaps)))
 
+(defun user-keys--maps-to-symbols (maps symbols)
+  "Find which SYMBOLS refer to keymaps in MAPS.
+Also return any maps that didn't match.
+
+This is useful when trying to reconstruct outputs of
+`current-active-maps'.
+
+It would be nice to get a list of these objects as symbols in
+order for inferencing keymaps.  This is the hard way."
+  (let ((found)
+        (maps (--remove (equal it '(keymap)) maps)))
+    (--map
+     (let ((m (if (boundp it)
+                  (symbol-value it)
+                (symbol-function it))))
+       (when (seq-contains-p maps m #'eq) ; only match objects
+         (setq maps (delete m maps))
+         (push it found)))
+     symbols)
+    `(,found ,maps)))
+
 (defsubst user-keys--normalize-sequence (sequence)
   "Round trip the SEQUENCE to eliminate common prefix effect.
 Within a keymap, having a common prefix seems to result in sequences

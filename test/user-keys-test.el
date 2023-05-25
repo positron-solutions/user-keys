@@ -61,6 +61,14 @@
   (should (member 'global-map (user-keys--other-maps
                                (user-keys--major-mode-keymaps)))))
 
+(ert-deftest user-keys--maps-to-symbols-test ()
+  (should (equal '((global-map) nil)
+                 (user-keys--maps-to-symbols
+                  (list (current-global-map)) '(global-map))))
+  (should (equal `(nil (,global-map))
+                 (user-keys--maps-to-symbols
+                  (list (current-global-map)) '()))))
+
 ;; (defmacro user-keys--find-bind (find-form body)
 ;;   "Pcase-let-bind FIND-FORM to matches and excludes for BODY."
 ;;   `(pcase-let ((`(,matches ,excludes))) ,find-form ,body))
