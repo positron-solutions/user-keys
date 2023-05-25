@@ -75,6 +75,18 @@ of keeping them bound.")
 (defvar user-keys--available-string (propertize "available" 'face 'success)
   "Nobody has spammed their keymap ads on this key sequence.")
 
+;; helper functions for custom
+
+(defun user-keys-meta-ize (key-letters)
+  "Return key-sequence encoded forms for meta modified KEY-LETTERS.
+KEY-LETERS should be a list of chars or integers."
+  (--map (vconcat (kbd (format "M-%c" it))) key-letters))
+
+(defun user-keys-ctl-fy (key-letters)
+  "Return key-sequence encoded forms for ctl modified KEY-LETTERS.
+KEY-LETERS should be a list of chars or integers."
+  (--map (vconcat (kbd (format "C-%c" it))) key-letters))
+
 ;; customize
 
 (defgroup user-keys nil "User keys.")
@@ -99,12 +111,46 @@ Modifiers are in A-C-H-M-S-s and specified in this order for valid keys"
 
 (defcustom user-keys-preferred-sequences
   "Sequences to look report in `user-keys-report-preferred'.
-Set to an expression or function that returns a list of sequence
-vectors.  By default, all top-level single-modifier keys are
-considered preferred sequences."
-  (--map (vector it)
-         (append (number-sequence ?\C-a ?\C-a)
-                 (number-sequence ?\M-a ?\M-z))))
+Set to an expression or function that returns a list of elements.
+Each element is a string and a list of key sequence vectors or a
+function that will return such a list.
+
+The string will be used to generate the match reasons, which are
+shown beside each match.  There can be overlap in the sequences,
+in which case all match reasons will be shown.  Sequences are
+sorted before display.
+
+By default, some top-level single-modifier keys on an English US
+keyboard are considered preferred sequences.  Home row and non-home
+row are divided into two groups.
+
+You are welcome to contribute a function that will respect the
+user's keyboard layout and language settings.
+
+Here's an example expression that just has two sections,
+
+  '((\"control keys\"
+     ,(--map (vector it (number-sequence ?\C-a ?\C-z))))
+    (\"home left meta keys\"
+     '([134217825] [134217843] [134217828] [134217830])))
+
+Key sequences have a lot of variety.  Too much.  Use `kbd' and
+`vconcat' in ielm to output sequences and `key-description' to see
+what the outputs mean in Emacs style key sequence notation."
+
+  (let ((home-row (string-to-list "asdfjkl;"))
+        (other (string-to-list "qwertyuiop[]\\gh'zxcvbnm,./")))
+    `((,(propertize "home meta" 'face 'font-lock-success-face)
+       ,(user-keys-meta-ize home-row))
+      (,(propertize "home ctl" 'face 'font-lock-builtin-face)
+       ,(user-keys-ctl-fy home-row))
+      (,(propertize "meta" 'face 'font-lock-keyword-face)
+       ,(user-keys-meta-ize other))
+      (,(propertize "ctl" 'face 'font-lock-string-face)
+       ,(user-keys-ctl-fy other))))
+
+  :type '(repeat (list string (choice function (list key-sequence))))
+  :group 'user-keys)
 
 ;; implementation functions
 
