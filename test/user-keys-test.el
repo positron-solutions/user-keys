@@ -200,7 +200,8 @@
     (should (equal (user-keys--find map (list predicate))
                    '((([97] forward-char ("too forward thinking"))) nil)))))
 
-
+(ert-deftest user-keys-report-shadows-test ()
+    (user-keys-report-shadows [24]))
 
 (provide 'user-keys-test)
 ;;; user-keys-test.el ends here.

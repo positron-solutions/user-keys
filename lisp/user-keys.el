@@ -244,6 +244,30 @@ easier design and debugging of rules."
      keymap)
     (list matches match-excludes)))
 
+(defun user-keys--render-report (report)
+  "Generic output function for similar-ishly structured reports.
+REPORT is a plist.
+:title - This header is rendered first.  Any string supported.
+:data - A list of elements.  Each element is a plist with :header
+  :col-labels and :rows.
+
+Each :data element will be rendered as a section and formatted so
+that :col-labels, if present, will be printed and aligned above
+data in :rows."
+  (user-keys--with-buffer
+   (erase-buffer)
+   (insert (plist-get report :title) "\n\n")
+   (mapc
+    (lambda (report-section)
+      (let ((header (plist-get report-section :header))
+            (col-labels (plist-get report-section :col-labels))
+            (rows (plist-get report-section :rows)))
+        (insert header "\n\n")
+        (mapc (lambda (r)
+                (insert (format "%s\n" r)))
+              rows)))
+    (plist-get report :data))))
+
 (defun user-keys-report-preferred ()
   "Show each of the user's preferred sequences in the current buffer."
   (interactive)
@@ -257,14 +281,63 @@ easier design and debugging of rules."
   ;; overriding
   (undefined))
 
-(defun user-keys-report-shadows (key)
-  "Show all keymaps that potentially could shadow KEY."
-  (interactive)
+(defun user-keys-report-shadows (sequence)
+  "Show all keymaps that potentially could shadow SEQUENCE."
+  (interactive (list (or user-keys-sequence
+                         (call-interactively
+                          #'user-keys-set-sequence-key))))
+  (let* ((basic-mode-maps '(fundamental-mode-map
+                            special-mode-map
+                            text-mode-map
+                            prog-mode-map))
+         (major-mode-maps (user-keys--major-mode-keymaps))
+         (minor-mode-maps (user-keys--minor-mode-keymaps))
+         (most-maps (append '(global-map)
+                            basic-mode-maps
+                            major-mode-maps
+                            minor-mode-maps))
+         (other-maps (user-keys--other-maps most-maps))
 
-  ;; global
-  ;; major modes
-  ;; other maps
-  (undefined))
+         ;; `keymap-lookup' uses string input.  `lookup-key' doc string
+         ;; says to prefer `keymap-lookup'.
+         (key-str (key-description sequence))
+
+         (lookups (->> ; it is a list of maps
+                   `(,'(global-map)
+                     ,basic-mode-maps
+                     ,major-mode-maps
+                     ,minor-mode-maps
+                     ,other-maps)
+                   (--map (-sort #'string< it))
+                   (--map
+                    (-non-nil
+                     (--map
+                      (let ((binding (with-demoted-errors
+                                         (keymap-lookup
+                                          (if (boundp it)
+                                              (symbol-value it)
+                                            (symbol-function it)) ; quirk!
+                                          key-str))))
+                        (when (and binding (symbolp binding))
+                          (list it binding)))
+                      it)))))
+         (sections '("Global Map"
+                     "Basic Mode Maps"
+                     "Major Mode Maps"
+                     "Minor Mode Maps"
+                     "Other Maps"))
+         (data (->>
+                (-zip sections lookups)
+                (--map (when (cdr it) (list
+                                       :header (car it)
+                                       :rows (cdr it))))
+                (-non-nil)))
+         (report `(:title
+                   ,(format
+                     "Shadows for %s"
+                     (propertize key-str 'face 'success))
+                   :data ,data)))
+    (user-keys--render-report report)))
 
 (defun user-keys-report-stupid ()
   "Show all of the stupid key sequences that are currently bound."
