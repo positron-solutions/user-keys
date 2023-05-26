@@ -407,10 +407,68 @@ data in :rows."
 (defun user-keys-report-stupid ()
   "Show all of the stupid key sequences that are currently bound."
   (interactive)
-  ;; global
-  ;; major modes
-  ;; other maps
-  (undefined))
+  ;; scan all keymaps and present each one as a section.
+  ;; TODO it may be more user friendly to look at a single keymap or
+  ;; buffer to see the preferred and stupid bindings.
+  (let* ((basic-mode-maps '(fundamental-mode-map
+                            special-mode-map
+                            text-mode-map
+                            prog-mode-map))
+         ;; `override-global-map' appears as an emulation map.
+         (high-precedence-maps '(override-global-map))
+         (major-mode-maps (user-keys--major-mode-keymaps))
+         (minor-mode-maps (user-keys--minor-mode-keymaps))
+         (most-maps (append '(global-map)
+                            high-precedence-maps
+                            basic-mode-maps
+                            major-mode-maps
+                            minor-mode-maps))
+         (other-maps (user-keys--other-maps most-maps))
+
+         (predicates (list (user-keys-multiple-modifiers-predicate
+                            "multiple modifiers")
+                           (user-keys-modified-basic-events-predicate
+                            user-keys--fkey-events "modified function keys")
+                           ;; TODO add predicate for stupid modifiers like hyper
+                           (user-keys-modified-basic-events-predicate
+                            user-keys-shifted-keys "modified shift keys")))
+
+         ;; Scan each map with predicates and amend results by
+         ;; appending the map name to each value.
+         (lookups (->>
+                   `((global-map)
+                     ,high-precedence-maps
+                     ,basic-mode-maps
+                     ,major-mode-maps
+                     ,minor-mode-maps
+                     ,other-maps)
+                   (--map (-sort #'string< it))
+                   (--map               ; it is a list of map symbols
+                    (-non-nil
+                     (--map             ; it is a single map symbol
+                      ;; TODO add sub-title support
+                      (let ((map (if (boundp it)
+                                     (symbol-value it)
+                                   (symbol-function it)))) ; quirk
+                        (list :title (symbol-name it)
+                              :rows (user-keys--find map predicates)))
+                      it)))))
+
+         (sections '("Global Map"
+                     "High Precedence Maps"
+                     "Basic Mode Maps"
+                     "Major Mode Maps"
+                     "Minor Mode Maps"
+                     "Other Maps"))
+         (data (->>
+                (-zip sections lookups)
+                (--map (when (cdr it) (list
+                                       :header (car it)
+                                       :rows (cdr it))))
+                (-non-nil)))
+         (report `(:title "Stupid Keys - bindings that should just not"
+                   :data ,data)))
+    (user-keys--render-report report)))
 
 (defun user-keys-generate-unbinds (output-type)
   "Generate an unbinding expression for OUTPUT-TYPE."
