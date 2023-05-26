@@ -336,15 +336,69 @@ data in :rows."
 (defun user-keys-report-preferred ()
   "Show each of the user's preferred sequences in the current buffer."
   (interactive)
-  (let (predicate (user-keys-sequences-predicate
-                   user-keys-preferred-sequences t)))
+  ;; TODO normalize to ask for target buffer when unassigned
 
-  ;; global
-  ;; major mode
-  ;; local map
-  ;; emulating
-  ;; overriding
-  (undefined))
+  ;; expand the preferred sequences if they contained functions
+  ;; TODO test with functions
+  (let* ((preferred (--map
+                     (let ((seqs (cadr it)))
+                       `(,(car it) ,(if (functionp seqs)
+                                        (funcall seqs)
+                                      seqs)))
+                     user-keys-preferred-sequences))
+
+         ;; First we want to see what bindings will be calculated.
+         ;; This lookup doesn't tell us which map or why, but it does
+         ;; tell us what the result will be.
+         (local-lookups (with-current-buffer user-keys-target-buffer
+                          (--map
+                           (let* ((sequences (cadr it))
+                                  (lookups
+                                   (--map
+                                    (list (key-description it)
+                                          (or (when-let ((description (key-binding it t)))
+                                                (cond
+                                                 ((or (symbolp description)
+                                                      (stringp description))
+                                                  (user-keys--button description))
+                                                 ((keymapp description)
+                                                  "<keymap>")
+                                                 ((t)
+                                                  (format "Bound to: %.20S..." description))))
+                                              user-keys--available-string))
+                                    sequences)))
+                             (list :header (car it)
+                                   :rows lookups))
+                           preferred)))
+
+         ;; scan active maps with predicates, combining results with
+         ;; map data to augment the key-binding pairs earlier
+         (predicates (--map (user-keys-sequences-predicate
+                             (cadr it) (car it))
+                            preferred))
+
+         ;; TODO perhaps abstract some of these functions and behaviors to a higher level.
+         ;; TODO this section was being written to work on active
+         ;; maps.  It's not clear what the use case is or how it
+         ;; should fit with other use cases.  I left this section
+         ;; commented in case someone wants to play around.
+         ;; (active-map-symbols
+         ;;  (let ((results (user-keys--maps-to-symbols
+         ;;                  (current-active-maps) (user-keys--other-maps '()))))
+         ;;    (when (cadr results)
+         ;;      ;; this shouldn't ruin anyone's day, but it is weird.
+         ;;      (message "user-keys: Some maps could not be resolved to symbols."))
+         ;;    (car results)))
+
+         ;; ;; then report on active maps (which may save time by revealing shadows)
+         ;; (scanned-lookups (--map
+         ;;                   (list :header it
+         ;;                         :rows (user-keys--find it predicates))
+         ;;                   active-map-symbols))
+
+         (report `(:title ,(format "Preferred Sequences in: %s" user-keys-target-buffer)
+                          :data ,local-lookups)))
+    (user-keys--render-report report)))
 
 (defun user-keys-report-shadows (sequence)
   "Show all keymaps that potentially could shadow SEQUENCE."
