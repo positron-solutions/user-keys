@@ -332,16 +332,31 @@ data in :rows."
   (user-keys--with-buffer
    (erase-buffer)
    (insert (plist-get report :title) "\n\n")
-   (mapc
-    (lambda (report-section)
-      (let ((header (plist-get report-section :header))
-            (col-labels (plist-get report-section :col-labels))
-            (rows (plist-get report-section :rows)))
-        (insert header "\n\n")
-        (mapc (lambda (r)
-                (insert (format "%s\n" r)))
-              rows)))
-    (plist-get report :data))))
+   (user-keys--insert-rows (plist-get report :rows) 0)))
+
+(defun user-keys--insert-rows (rows indentation)
+  "Recursively insert ROWS into the buffer.
+Begin each row with INDENTATION spaces.  Descend if ROWS is a
+plist containing :header, then print :rows.  This can handle
+recursive plists."
+  (when-let ((header (plist-get rows :header)))
+    (insert (user-keys--section-header header indentation)))
+  (if-let ((more-rows (plist-get rows :rows)))
+      (user-keys-insert-rows more-rows (+ 2 indentation))
+    ;; TODO add col-labels to the header row after the widths
+    ;; are known, just before inserting rows.  Probably
+    ;; requires backup up in the buffer and popping a mark.
+    (let* ((ncols (-max (-map #'length (rows))))
+           (widths (--map
+                    (1+ (-max (--map (length (nth it)) rows)))
+                    (number-sequence 0 (-1 ncols))))
+
+           (format-str (apply #'concat
+                              (make-string indentation ?\s)
+                              (append (--map (format "%%-%ds" it) widths)
+                                      '("\n")))))
+      (--each rows
+        (insert (apply #'format format-str it))))))
 
 (defun user-keys-report-preferred ()
   "Show each of the user's preferred sequences in the current buffer."
