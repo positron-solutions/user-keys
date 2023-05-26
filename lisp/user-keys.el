@@ -164,13 +164,23 @@ what the outputs mean in Emacs style key sequence notation."
           (user-keys-mode)
           buffer))))
 
-(defmacro user-keys--with-buffer (buffer-symbol form)
-  "Prepare and bind report buffer to BUFFER-SYMBOL and evaluate FORM."
-  `(let ((,buffer-symbol (user-keys--get-buffer)))
-     (progn (read-only-mode -1)
-            (set-buffer buffer-symbol)
-            ,form
-            (read-only-mode 1))))
+;; TODO tests for this macro
+(defmacro user-keys--with-buffer (&rest body)
+  "Wrap the evaluation of BODY forms with buffer handling.
+We don't want to get read-only at the wrong time or execute in the
+wrong buffer's context."
+  `(progn
+     (set-buffer (user-keys--get-buffer))
+     (setq buffer-read-only nil)
+     (condition-case form-value
+         (progn ,@body)
+       ((debug error)
+        (setq buffer-read-only t)
+        ;; propagate errors from BODY
+        (signal (car form-value) (cadr form-value)))
+       (:success
+        (setq buffer-read-only t)
+        form-value))))
 
 (defun user-keys--pop-to-buffer ()
   "Pop to the reporting buffer."
