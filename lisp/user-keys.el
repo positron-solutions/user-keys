@@ -409,9 +409,12 @@ data in :rows."
                             special-mode-map
                             text-mode-map
                             prog-mode-map))
+         ;; `override-global-map' appears as an emulation map.
+         (high-precedence-maps '(override-global-map))
          (major-mode-maps (user-keys--major-mode-keymaps))
          (minor-mode-maps (user-keys--minor-mode-keymaps))
          (most-maps (append '(global-map)
+                            high-precedence-maps
                             basic-mode-maps
                             major-mode-maps
                             minor-mode-maps))
@@ -421,16 +424,17 @@ data in :rows."
          ;; says to prefer `keymap-lookup'.
          (key-str (key-description sequence))
 
-         (lookups (->> ; it is a list of maps
+         (lookups (->>
                    `(,'(global-map)
+                     ,high-precedence-maps
                      ,basic-mode-maps
                      ,major-mode-maps
                      ,minor-mode-maps
                      ,other-maps)
                    (--map (-sort #'string< it))
-                   (--map
+                   (--map ; it is a list of maps
                     (-non-nil
-                     (--map
+                     (--map ; it is a single map
                       (let ((binding (with-demoted-errors
                                          (keymap-lookup
                                           (if (boundp it)
@@ -441,9 +445,12 @@ data in :rows."
                           (list it binding)))
                       it)))))
          (sections '("Global Map"
+                     "High Precedence Maps"
                      "Basic Mode Maps"
                      "Major Mode Maps"
                      "Minor Mode Maps"
+                     ;; TODO support overriding maps,
+                     ;; support showing maps in lookup order.
                      "Other Maps"))
          (data (->>
                 (-zip sections lookups)
