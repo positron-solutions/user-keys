@@ -64,8 +64,9 @@
     )
   "Sequences should almost never end in these events.")
 
+;; TODO exception sequences not implemented in stupid keys report
 (defvar user-keys--exception-sequences
-  '([f1 f11])
+  '([f1] [f11])
   "Sequences to except from usual unbinding.
 Some key sequences are from desktop environment idioms rather
 than traditional Emacs design errors.  While these desktop
@@ -98,7 +99,7 @@ Modifiers are in A-C-H-M-S-s and specified in this order for valid keys"
   :type '(repeat (repeat string))
   :group 'user-keys)
 
-(defcustom user-keys-buffer-name "*User-Keys*"
+(defcustom user-keys-buffer-name "*user-keys*"
   "Where should we display interactive output?"
   :type 'string
   :group 'user-keys)
@@ -110,6 +111,17 @@ Modifiers are in A-C-H-M-S-s and specified in this order for valid keys"
   :group 'user-keys)
 
 (defcustom user-keys-preferred-sequences
+  (let ((home-row (string-to-list "asdfjkl;"))
+        ;; TODO some of these keys map to ESC etc
+        (other (string-to-list "qwertyuiop[]\\gh'zxcvbnm,./")))
+    `((,(propertize "home meta" 'face 'font-lock-success-face)
+       ,(user-keys-meta-ize home-row))
+      (,(propertize "home ctl" 'face 'font-lock-builtin-face)
+       ,(user-keys-ctl-fy home-row))
+      (,(propertize "meta" 'face 'font-lock-keyword-face)
+       ,(user-keys-meta-ize other))
+      (,(propertize "ctl" 'face 'font-lock-string-face)
+       ,(user-keys-ctl-fy other))))
   "Sequences to look report in `user-keys-report-preferred'.
 Set to an expression or function that returns a list of elements.
 Each element is a string and a list of key sequence vectors or a
@@ -137,17 +149,6 @@ Here's an example expression that just has two sections,
 Key sequences have a lot of variety.  Too much.  Use `kbd' and
 `vconcat' in ielm to output sequences and `key-description' to see
 what the outputs mean in Emacs style key sequence notation."
-
-  (let ((home-row (string-to-list "asdfjkl;"))
-        (other (string-to-list "qwertyuiop[]\\gh'zxcvbnm,./")))
-    `((,(propertize "home meta" 'face 'font-lock-success-face)
-       ,(user-keys-meta-ize home-row))
-      (,(propertize "home ctl" 'face 'font-lock-builtin-face)
-       ,(user-keys-ctl-fy home-row))
-      (,(propertize "meta" 'face 'font-lock-keyword-face)
-       ,(user-keys-meta-ize other))
-      (,(propertize "ctl" 'face 'font-lock-string-face)
-       ,(user-keys-ctl-fy other))))
 
   :type '(repeat (list string (choice function (list key-sequence))))
   :group 'user-keys)
@@ -223,12 +224,9 @@ KEYMAP-LISTS is a list of lists of map symbols."
        (puthash map map known-keymaps))
      keymaps)
 
-    ;; TODO keymapp on symbols is annoying
+    ;; TODO keymapp on symbols that have symbol-function is annoying
     (mapatoms (lambda (a) (when (or (keymapp a)
                                (and (boundp a) (keymapp (symbol-value a))))
-                       (when (equal a 'emacs-lisp-mode-map)
-                         (message "Emacs lisp mode map: %s" a)
-                         (message "Hash contains: %s" (gethash a known-keymaps)))
                        (unless (gethash a known-keymaps)
                          (puthash a a other-keymaps)))))
     (hash-table-keys other-keymaps)))
@@ -419,8 +417,6 @@ data in :rows."
   (interactive)
 
   (undefined))
-
-;;; TODO what is common to all reports and how can we make each one useful?
 
 ;; functions useful for those extending user-keys, part of external API
 

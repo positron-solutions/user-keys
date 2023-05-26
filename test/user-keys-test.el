@@ -69,10 +69,6 @@
                  (user-keys--maps-to-symbols
                   (list (current-global-map)) '()))))
 
-;; (defmacro user-keys--find-bind (find-form body)
-;;   "Pcase-let-bind FIND-FORM to matches and excludes for BODY."
-;;   `(pcase-let ((`(,matches ,excludes))) ,find-form ,body))
-
 (ert-deftest user-keys--find-test ()
   ;; no predicates, empty list
   (should (equal (user-keys--find global-map nil) '(nil nil)))

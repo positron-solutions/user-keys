@@ -54,7 +54,7 @@
 
 *** Converting representations
 
-    - =kbd= will convert strings to representations acceped by
+    - =kbd= will convert strings to representations accweped by
       =define-key=
     - =vconcat= will convert those representations into a vector,
       which is frequently the literal you see when inspecting keymaps
@@ -79,7 +79,9 @@
     - =key-binding= all maps
     - =local-key-binding= local maps
     - =minor-mode-key-binding= active minor mode maps
-    - =lookup-key= For looking at a specific map
+    - =lookup-key= For looking at a specific map.  Documents now say
+      to use =keymap-lookup=, which accepts a string instead of vector
+      (and probably other) type.
 
 ***  What is in this map?
 
