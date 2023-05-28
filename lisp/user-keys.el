@@ -758,6 +758,15 @@ because the input in the active maps is still a prefix."
     ""
     ("b" "active buffer" user-keys-set-buffer :transient t)]])
 
+(declare-function helpful-at-point "helpful" ())
+(defun user-keys--push-button ()
+  "Open help for symbol at point.
+Use `helpful' package if loaded."
+  (interactive)
+  (if (featurep 'helpful)
+      (helpful-at-point)
+    (describe-symbol (symbol-at-point))))
+
 (defvar user-keys-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent
@@ -776,6 +785,10 @@ because the input in the active maps is still a prefix."
     (define-key map "p" 'user-keys-report-preferred)
     (define-key map "t" 'user-keys-report-stupid)
     (define-key map "T" 'user-keys-report-unbinds)
+
+    ;; TODO different kinds of values could exist.  Function
+    ;; keymaps are an example.
+    (define-key map [remap push-button] #'user-keys--push-button)
     map))
 
 (define-derived-mode user-keys-mode special-mode
