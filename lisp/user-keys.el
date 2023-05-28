@@ -405,33 +405,38 @@ recursive plists."
          ;; First we want to see what bindings will be calculated.
          ;; This lookup doesn't tell us which map or why, but it does
          ;; tell us what the result will be.
-         (local-lookups (with-current-buffer user-keys-target-buffer
-                          (--map
-                           (let* ((sequences (cadr it))
-                                  (lookups
-                                   (--map
-                                    (list (key-description it)
-                                          (or (when-let ((description (key-binding it t)))
-                                                (cond
-                                                 ((or (symbolp description)
-                                                      (stringp description))
-                                                  (user-keys--button description))
-                                                 ((keymapp description)
-                                                  "<keymap>")
-                                                 ((t)
-                                                  (format "Bound to: %.20S..." description))))
-                                              user-keys--available-string))
-                                    sequences)))
-                             (list :header (car it)
-                                   :rows lookups))
-                           preferred)))
+         (target-buffer (or user-keys-target-buffer
+                            (current-buffer)))
+         (local-lookups
+          (with-current-buffer target-buffer
+            (--map
+             (let* ((sequences (cadr it))
+                    (lookups
+                     (--map
+                      (list
+                       (key-description it) ; TODO factor out description munging.
+                       (or (when-let ((description (key-binding it t)))
+                             (cond
+                              ((or (symbolp description)
+                                   (stringp description))
+                               (user-keys--maybe-button description))
+                              ((keymapp description)
+                               "<keymap>")
+                              ((numberp description)
+                               "prefix ")
+                              ((kmu-menu-binding-p description)
+                               (format "menu-item - %s" (nth 2 description)))
+                              (t
+                               (format "Bound to: %.20S..." description))))
+                           user-keys--available-string))
+                      sequences)))
+               (list :header (car it)
+                     :rows lookups))
+             preferred)))
 
          ;; TODO this section was being written to work on active
          ;; scan active maps with predicates, combining results with
          ;; map data to augment the key-binding pairs earlier
-         (predicates (--map (user-keys-sequences-predicate
-                             (cadr it) (car it))
-                            preferred))
          ;; maps.  It's not clear what the use case is or how it
          ;; should fit with other use cases.  I left this section
          ;; commented in case someone wants to play around.
@@ -453,7 +458,7 @@ recursive plists."
          ;;                         :rows (user-keys--find it predicates))
          ;;                   active-map-symbols))
 
-         (report `(:title ,(format "Preferred Sequences in: %s" user-keys-target-buffer)
+         (report `(:title ,(format "Preferred Sequences in: %s" target-buffer)
                           :data ,local-lookups)))
     (user-keys--render-report report)))
 
