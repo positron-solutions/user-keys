@@ -263,6 +263,7 @@ This is useful when trying to reconstruct outputs of
 It would be nice to get a list of these objects as symbols in
 order for inferencing keymaps.  This is the hard way."
   (let ((found)
+        ;; warns on mapcar, just some dash noise
         (maps (--remove (equal it '(keymap)) maps)))
     (--map
      (let ((m (if (boundp it)
@@ -391,7 +392,6 @@ recursive plists."
 (defun user-keys-report-preferred ()
   "Show each of the user's preferred sequences in the current buffer."
   (interactive)
-  ;; TODO normalize to ask for target buffer when unassigned
 
   ;; expand the preferred sequences if they contained functions
   ;; TODO test with functions
@@ -426,17 +426,19 @@ recursive plists."
                                    :rows lookups))
                            preferred)))
 
+         ;; TODO this section was being written to work on active
          ;; scan active maps with predicates, combining results with
          ;; map data to augment the key-binding pairs earlier
          (predicates (--map (user-keys-sequences-predicate
                              (cadr it) (car it))
                             preferred))
-
-         ;; TODO perhaps abstract some of these functions and behaviors to a higher level.
-         ;; TODO this section was being written to work on active
          ;; maps.  It's not clear what the use case is or how it
          ;; should fit with other use cases.  I left this section
          ;; commented in case someone wants to play around.
+         ;; (predicates (--map (user-keys-sequences-predicate
+         ;;                     (cadr it) (car it))
+         ;;                    preferred))
+
          ;; (active-map-symbols
          ;;  (let ((results (user-keys--maps-to-symbols
          ;;                  (current-active-maps) (user-keys--other-maps '()))))
