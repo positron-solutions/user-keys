@@ -573,11 +573,12 @@ recursive plists."
                     (-non-nil
                      (--map             ; it is a single map symbol
                       ;; TODO add sub-title support
-                      (let ((map (if (boundp it)
-                                     (symbol-value it)
-                                   (symbol-function it)))) ; quirk
-                        (list :title (symbol-name it)
-                              :rows (user-keys--find map predicates)))
+                      (if-let ((map (if (boundp it)
+                                        (symbol-value it)
+                                      (symbol-function it)))) ; quirk
+                        (list :header it
+                              :rows (car (user-keys--find map predicates)))
+                        (warn "Keymap could not be scanned: %s" it))
                       it)))))
 
          (sections '("Global Map"
