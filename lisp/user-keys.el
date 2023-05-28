@@ -112,16 +112,18 @@ Modifiers are in A-C-H-M-S-s and specified in this order for valid keys"
 
 (defcustom user-keys-preferred-sequences
   (let ((home-row (string-to-list "asdfjkl;"))
-        ;; TODO some of these keys map to ESC etc
-        (other (string-to-list "qwertyuiop[]\\gh'zxcvbnm,./")))
-    `((,(propertize "home meta" 'face 'font-lock-success-face)
+        (other-meta (string-to-list "qwertyuiop[]\\gh'zxcvbnm,./"))
+        ;; C-m is RET, C-i is TAB...
+        ;; Control is just a good preferred modifier...
+        (other-ctl (string-to-list "qwertyuop\\gh'zxcvbn,./")))
+    `((,(propertize "home meta keys\n" 'face 'success)
        ,(user-keys-meta-ize home-row))
-      (,(propertize "home ctl" 'face 'font-lock-builtin-face)
+      (,(propertize "home ctl keys\n" 'face 'font-lock-builtin-face)
        ,(user-keys-ctl-fy home-row))
-      (,(propertize "meta" 'face 'font-lock-keyword-face)
-       ,(user-keys-meta-ize other))
-      (,(propertize "ctl" 'face 'font-lock-string-face)
-       ,(user-keys-ctl-fy other))))
+      (,(propertize "meta keys\n" 'face 'font-lock-keyword-face)
+       ,(user-keys-meta-ize other-meta))
+      (,(propertize "ctl keys\n" 'face 'font-lock-string-face)
+       ,(user-keys-ctl-fy other-ctl))))
   "Sequences to look report in `user-keys-report-preferred'.
 Set to an expression or function that returns a list of elements.
 Each element is a string and a list of key sequence vectors or a
