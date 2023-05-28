@@ -188,17 +188,27 @@ wrong buffer's context."
   "Pop to the reporting buffer."
   (pop-to-buffer (user-keys--get-buffer)))
 
-(defsubst user-keys--button (symbol)
-  "Format SYMBOL as a button that displays its documentation."
-  (propertize (if (symbolp symbol)
-                  (symbol-name symbol) symbol)
-              'face 'button
-              'button '(t)
-              'category 'default-button))
+(defsubst user-keys--maybe-button (text-or-symbol)
+  "Format TEXT-OR-SYMBOL as a button that displays its documentation."
+  (if (symbolp text-or-symbol)
+      (propertize (symbol-name text-or-symbol)
+                  'face 'button
+                  'button '(t)
+                  'category 'default-button)
+    text-or-symbol))
 
-(defsubst user-keys--section-header (text)
-  "Make a dividing section header for TEXT for pretty printing results."
-  format "\n%s\n%s\n" text (make-string (length text) ?-))
+;; TODO make click actions appropriate for types.  Keys should show shadows.
+;; Maps should show preferred and stupid.  Modes should show active maps etc.
+(defsubst user-keys--section-header (text-or-symbol indentation)
+  "Make a dividing section header for TEXT-OR-SYMBOL.
+Indent by INDENTATION.  If not indented, add an underline since
+this is a proper section.  Make the symbol a button if it
+probably should be clickable."
+  (let ((header-text (user-keys--maybe-button text-or-symbol)))
+    (if (> indentation 0)
+        (format "\n%s%s\n" (make-string indentation ?\s) header-text)
+      (format "\n%s\n%s\n\n" header-text
+              (make-string (length header-text) ?\-)))))
 
 (defun user-keys--major-mode-keymaps ()
   "Return a list of major modes map symbols."
@@ -333,32 +343,50 @@ that :col-labels, if present, will be printed and aligned above
 data in :rows."
   (user-keys--with-buffer
    (erase-buffer)
-   (insert (plist-get report :title) "\n\n")
-   (user-keys--insert-rows (plist-get report :rows) 0)))
+   ;; TODO title is less prominent than section headers
+   (insert (plist-get report :title) "\n")
+   (user-keys--insert-rows (plist-get report :data) 0)))
 
 (defun user-keys--insert-rows (rows indentation)
   "Recursively insert ROWS into the buffer.
 Begin each row with INDENTATION spaces.  Descend if ROWS is a
 plist containing :header, then print :rows.  This can handle
 recursive plists."
-  (when-let ((header (plist-get rows :header)))
-    (insert (user-keys--section-header header indentation)))
-  (if-let ((more-rows (plist-get rows :rows)))
-      (user-keys-insert-rows more-rows (+ 2 indentation))
-    ;; TODO add col-labels to the header row after the widths
-    ;; are known, just before inserting rows.  Probably
-    ;; requires backup up in the buffer and popping a mark.
-    (let* ((ncols (-max (-map #'length (rows))))
-           (widths (--map
-                    (1+ (-max (--map (length (nth it)) rows)))
-                    (number-sequence 0 (-1 ncols))))
+  (when rows ; TODO filter empty sections during generation
+    (let ((header (plist-get rows :header)))
+      (when header
+        (insert (user-keys--section-header header indentation))))
 
-           (format-str (apply #'concat
-                              (make-string indentation ?\s)
-                              (append (--map (format "%%-%ds" it) widths)
-                                      '("\n")))))
-      (--each rows
-        (insert (apply #'format format-str it))))))
+    (let* ((rows (or (plist-get rows :rows) rows))
+           (recursive (plist-get (car rows) :rows)))
+      (if recursive
+          ;; if each row contains embedded rows, recurse into each
+          ;; iteration.  If not, just render each row.
+          (--each rows (user-keys--insert-rows it (+ 2 indentation)))
+
+        ;; TODO add col-labels to the header row after the widths
+        ;; are known, just before inserting rows.  Probably
+        ;; requires backup up in the buffer and popping a mark.
+
+        ;; column information needs to be extracted prior to
+        ;; rendering any rows.
+        (let* ((ncols (-max (-map #'length rows)))
+               (widths (-map
+                        (lambda (n)
+                          (1+ (-max (--map (length (nth n it)) rows))))
+                        (number-sequence 0 (1- ncols)))))
+          (--each rows
+            (apply #'insert
+                   `(,(make-string indentation ?\s)
+                     ,@(-interpose
+                        " "
+                        (--map-indexed
+                         (let* ((width (nth it-index widths))
+                                (str (if (stringp it) it (format "%s" it)))
+                                (short (- width (length str))))
+                           (concat str (make-string short ?\s)))
+                         it))
+                     "\n"))))))))
 
 (defun user-keys-report-preferred ()
   "Show each of the user's preferred sequences in the current buffer."
