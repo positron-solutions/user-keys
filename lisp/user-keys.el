@@ -210,6 +210,24 @@ probably should be clickable."
       (format "\n%s\n%s\n\n" header-text
               (make-string (length header-text) ?\-)))))
 
+(defun user-keys--describe-binding (binding)
+  "Return a formatted representation of what the BINDING for a key is.
+This function handles the numerous possible types of values
+that can be returned from `key-binding' and during
+`kmu-map-keymap'."
+  (cond
+   ((or (symbolp binding)
+        (stringp binding))
+    (user-keys--maybe-button binding))
+   ((keymapp binding)
+    "<keymap>")
+   ((numberp binding)
+    "prefix ")
+   ((kmu-menu-binding-p binding)
+    (format "menu-item - %s" (nth 2 binding)))
+   (t
+    (format "Bound to: %.20S..." binding))))
+
 (defun user-keys--major-mode-keymaps ()
   "Return a list of major modes map symbols."
   (let* ((major-mode-keymaps '())
@@ -421,18 +439,7 @@ recursive plists."
                       (list
                        (key-description it) ; TODO factor out description munging.
                        (or (when-let ((description (key-binding it t)))
-                             (cond
-                              ((or (symbolp description)
-                                   (stringp description))
-                               (user-keys--maybe-button description))
-                              ((keymapp description)
-                               "<keymap>")
-                              ((numberp description)
-                               "prefix ")
-                              ((kmu-menu-binding-p description)
-                               (format "menu-item - %s" (nth 2 description)))
-                              (t
-                               (format "Bound to: %.20S..." description))))
+                             (user-keys--describe-binding description)
                            user-keys--available-string))
                       sequences)))
                (list :header (car it)
@@ -507,8 +514,8 @@ recursive plists."
                                               (symbol-value it)
                                             (symbol-function it)) ; quirk!
                                           key-str))))
-                        (when (and binding (symbolp binding))
-                          (list it binding)))
+                        (when binding
+                          (list it (user-keys--describe-binding binding))))
                       it)))))
          (sections '("Global Map"
                      "High Precedence Maps"
