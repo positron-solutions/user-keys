@@ -472,8 +472,7 @@ recursive plists."
   (interactive (list (or user-keys-sequence
                          (call-interactively
                           #'user-keys-set-sequence-key))))
-  (let* ((basic-mode-maps '(fundamental-mode-map
-                            special-mode-map
+  (let* ((basic-mode-maps '(special-mode-map
                             text-mode-map
                             prog-mode-map))
          ;; `override-global-map' appears as an emulation map.
@@ -538,8 +537,7 @@ recursive plists."
   ;; scan all keymaps and present each one as a section.
   ;; TODO it may be more user friendly to look at a single keymap or
   ;; buffer to see the preferred and stupid bindings.
-  (let* ((basic-mode-maps '(fundamental-mode-map
-                            special-mode-map
+  (let* ((basic-mode-maps '(special-mode-map
                             text-mode-map
                             prog-mode-map))
          ;; `override-global-map' appears as an emulation map.
