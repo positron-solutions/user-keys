@@ -319,8 +319,13 @@ easier design and debugging of rules."
     (kmu-map-keymap
      (lambda (sequence definition)
        (let ((orig-sequence sequence)
-             (sequence (user-keys--normalize-sequence
-                        (user-keys--maybe-unroll sequence)))
+             (sequence
+              (condition-case error
+                  (user-keys--normalize-sequence
+                   (user-keys--maybe-unroll sequence))
+                (error
+                 (message "user-keys: sequence processed raw: %s" sequence)
+                 sequence)))
              (exclusions (-non-nil (--map
                                     (funcall it sequence definition)
                                     exclude-predicates))))
