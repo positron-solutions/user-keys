@@ -273,10 +273,10 @@ that can be returned from `key-binding' and during
          (_ (mapatoms
              (lambda (a) (when (get a 'derived-mode-parent)
                       (let ((mode-map-name (derived-mode-map-name a)))
-                        (when (and (boundp mode-map-name)
-                                   (keymapp  (symbol-value mode-map-name)))
-                          (push mode-map-name
-                                major-mode-keymaps))))))))
+                        (with-demoted-errors "user-keys major mode lookup: %S"
+                          (when (keymapp
+                                 (user-keys--symbol-to-map mode-map-name))
+                            (push mode-map-name major-mode-keymaps)))))))))
     major-mode-keymaps))
 
 (defun user-keys--minor-mode-keymaps (&optional active-only)
@@ -287,8 +287,7 @@ are returned."
    (--map (let* ((mode-name (car it))
                  (mode-map-name (derived-mode-map-name mode-name)))
             (if (and (or (not active-only) (symbol-value mode-name))
-                     (boundp mode-map-name)
-                     (keymapp (symbol-value mode-map-name)))
+                     (keymapp (user-keys--symbol-to-map mode-map-name)))
                 mode-map-name
               nil))
           minor-mode-map-alist)))
@@ -304,8 +303,10 @@ KEYMAP-LISTS is a list of lists of map symbols."
      keymaps)
 
     ;; TODO keymapp on symbols that have symbol-function is annoying
+    ;; See `user-keys-symbol-to-map' for the reverse operation.
     (mapatoms (lambda (a) (when (or (keymapp a)
-                               (and (boundp a) (keymapp (symbol-value a))))
+                               (and (boundp a) (keymapp (symbol-value a)))
+                               (and (fboundp a) (keymapp (symbol-function a))))
                        (unless (gethash a known-keymaps)
                          (puthash a a other-keymaps)))))
     (--remove (member it user-keys-ignore-maps) (hash-table-keys other-keymaps))))
@@ -331,6 +332,27 @@ order for inferencing keymaps.  This is the hard way."
          (push it found)))
      symbols)
     `(,found ,maps)))
+
+(defun user-keys--symbol-to-map (symbol)
+  "Get an actual keymap for SYMBOL.
+`keymapp' will return t for all kinds of values.  Keymaps,
+autoloads, symbols whose function definitions are keymaps.  This
+function encapsulates these little quirks."
+  (condition-case
+      keymap-error
+      (progn
+        (let ((value (or (and (boundp symbol) (symbol-value symbol))
+                         (and (fboundp symbol) (symbol-function symbol)))))
+          ;; Go ahead and eagerly load all keymaps so that we can inspect them.
+          ;; Sorry, user memory.
+          (when (autoloadp value)
+            (autoload-do-load value)
+            (setq value (or (and (boundp symbol) (symbol-value symbol))
+                            (and (fboundp symbol)(symbol-function symbol)))))
+          (unless (keymapp value)
+            (error "Values was not a keymap: %s" symbol))
+          value))
+    (error (message "No keymap could be obtained from symbol: %s" symbol))))
 
 (defsubst user-keys--normalize-sequence (sequence)
   "Round trip the SEQUENCE to eliminate common prefix effect.
@@ -549,9 +571,7 @@ recursive plists."
                      (--map ; it is a single map symbol
                       (let ((binding (with-demoted-errors
                                          (keymap-lookup
-                                          (if (boundp it)
-                                              (symbol-value it)
-                                            (symbol-function it)) ; quirk!
+                                          (user-keys--symbol-to-map it)
                                           key-str))))
                         (when binding
                           (list it (user-keys--describe-binding binding))))
