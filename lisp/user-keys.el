@@ -434,7 +434,8 @@ data in :rows."
    (erase-buffer)
    ;; TODO title is less prominent than section headers
    (insert (plist-get report :title) "\n")
-   (user-keys--insert-rows (plist-get report :data) 0)))
+   (user-keys--insert-rows (plist-get report :data) 0)
+   (goto-char 0)))
 
 (defun user-keys--insert-rows (rows indentation)
   "Recursively insert ROWS into the buffer.
