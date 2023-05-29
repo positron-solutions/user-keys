@@ -463,7 +463,14 @@ recursive plists."
         (let* ((ncols (-max (-map #'length rows)))
                (widths (-map
                         (lambda (n)
-                          (1+ (-max (--map (length (nth n it)) rows))))
+                          (1+ (-max (--map
+                                     ;; TODO munge this beforehand so we don't
+                                     ;; ever need to convert
+                                     (let ((item (nth n it)))
+                                       (if (stringp item)
+                                           (length item)
+                                         (length (format "%s" item))))
+                                     rows))))
                         (number-sequence 0 (1- ncols)))))
           (--each rows
             (apply #'insert
