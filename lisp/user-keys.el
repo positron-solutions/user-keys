@@ -166,6 +166,17 @@ what the outputs mean in Emacs style key sequence notation."
   :type '(repeat (list string (choice function (list key-sequence))))
   :group 'user-keys)
 
+(defcustom user-keys-ignore-maps '(yank-menu
+                                   xterm-function-map
+                                   key-translation-map
+                                   function-key-map)
+  "Some maps are simultaneously very weird and not very useful.
+In particular, maps that cause errors because of, for example,
+failing the `keymapp' test after autoloaded but not before,
+should just be ignored."
+  :type '(repeat symbol)
+  :group 'user-keys)
+
 ;; implementation functions
 
 (defun user-keys--get-buffer ()
@@ -280,7 +291,7 @@ KEYMAP-LISTS is a list of lists of map symbols."
                                (and (boundp a) (keymapp (symbol-value a))))
                        (unless (gethash a known-keymaps)
                          (puthash a a other-keymaps)))))
-    (hash-table-keys other-keymaps)))
+    (--remove (member it user-keys-ignore-maps) (hash-table-keys other-keymaps))))
 
 (defun user-keys--maps-to-symbols (maps symbols)
   "Find which SYMBOLS refer to keymaps in MAPS.
