@@ -292,6 +292,12 @@ are returned."
               nil))
           minor-mode-map-alist)))
 
+(defun user-keys--emulation-keymaps (&optional active-only)
+  "Return a list of all minor mode keymaps.
+Optional ACTIVE-ONLY argument will control if only active maps
+are returned."
+  )
+
 (defun user-keys--other-maps(keymaps)
   "Return a list of all keymaps not in KEYMAPS.
 KEYMAP-LISTS is a list of lists of map symbols."
@@ -589,6 +595,7 @@ recursive plists."
                         (when binding
                           (list it (user-keys--describe-binding binding))))
                       it)))))
+
          (sections '("Global Map"
                      "High Precedence Maps"
                      "Basic Mode Maps"

@@ -2,7 +2,11 @@
 #+AUTHOR: Psionik K
 #+PROPERTY: header-args :results silent
 
-#+HTML: <img src="./TODO.png" alt="Sequences consisting of C-c and a letter are the only sequences reserved for users.  (An error).">
+#+HTML: <img width=400 src="https://github.com/positron-solutions/user-keys/assets/73710933/1d684941-0baf-42ad-b053-e0024c0812ce" alt="Sequences consisting of C-c and a letter are the only sequences reserved for users.  (An error).">
+#+HTML: <br>
+#+HTML: <a href="https://melpa.org/#/user-keys"><img src="https://melpa.org/packages/user-keys-badge.svg" alt="melpa package"></a> <a href="https://stable.melpa.org/#/user-keys"><img src="https://stable.melpa.org/packages/user-keys-badge.svg" alt="melpa stable package"></a>
+#+HTML: <a href="https://github.com/positron-solutions/user-keys/actions/?workflow=CI"><img src="https://github.com/positron-solutions/user-keys/actions/workflows/ci.yml/badge.svg" alt="CI workflow status"></a>
+#+HTML: <a href="https://github.com/positron-solutions/user-keys/actions/?workflow=Developer+Certificate+of+Origin"><img src="https://github.com/positron-solutions/user-keys/actions/workflows/dco.yml/badge.svg" alt="DCO Check"></a>
 
 - Remove legacy keymap spam
 - Move keys that express ideas, such as =C-n=, coherently across multiple modes
@@ -41,16 +45,12 @@
 
     ;; Check for shadows for a common sequence so you can move all of it's bindings
     ;; around at once.
-    (user-keys-report-shadows (kbd "C-n"))
+    (user-keys-report-shadows)
 
-    ;; Show active maps, helpful for debugging modal systems such as Meow and Evil
-    (user-keys-report-active-maps)
+    ;; Open the output buffer and use the transient interface
+    (user-keys-start)
 
   #+end_src
-
-  Like magit, but for bindings and keymaps:
-
-  #+HTML: <img src="./TODO.mp4" alt="A transient interface for inspecting bindings.">  
 
 * Contents
 :PROPERTIES:
