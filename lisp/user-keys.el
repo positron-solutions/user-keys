@@ -503,6 +503,7 @@ recursive plists."
          ;; tell us what the result will be.
          (target-buffer (or user-keys-target-buffer
                             (current-buffer)))
+
          (local-lookups
           (with-current-buffer target-buffer
             (--map
@@ -512,7 +513,7 @@ recursive plists."
                       (list
                        (key-description it)
                        (or (when-let ((description (key-binding it t)))
-                             (user-keys--describe-binding description)
+                             (user-keys--describe-binding description))
                            user-keys--available-string))
                       sequences)))
                (list :header (car it)
