@@ -370,6 +370,10 @@ with multiple keys even though the simple `kbd' result is just one key."
               it)
             sequence)))
 
+(defun user-keys--remove-mouse-mods (modifiers)
+  "Remove mouse modifiers from MODIFIERS."
+  (--remove (member it '(click drag down)) modifiers))
+
 (defun user-keys--find (keymap seq-predicates &optional exclude-predicates)
   "Find all sequences in KEYMAP matched by SEQ-PREDICATES.
 
@@ -695,7 +699,11 @@ The REASON will be returned for reporters."
 The REASON will be returned for reporters."
   (lambda (sequence _)
     (when (-non-nil
-           (--map (> (length (event-modifiers it)) 1) sequence))
+           (--map
+            (> (length (user-keys--remove-mouse-mods
+                        (event-modifiers it)))
+             1)
+            sequence))
       reason)))
 
 (defun user-keys-modified-basic-events-predicate (basic-events reason)
