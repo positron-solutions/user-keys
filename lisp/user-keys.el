@@ -644,12 +644,19 @@ recursive plists."
                    (--map               ; it is a list of map symbols
                     (-non-nil
                      (--map             ; it is a single map symbol
-                      ;; TODO add sub-title support
-                      (if-let ((map (if (boundp it)
-                                        (symbol-value it)
-                                      (symbol-function it)))) ; quirk
-                        (list :header it
-                              :rows (car (user-keys--find map predicates)))
+                      (if-let ((map (user-keys--symbol-to-map it)))
+                          (condition-case error
+                              (when-let ((scanned (car (user-keys--find map predicates)))
+                                         (display
+                                          (--map
+                                           (list
+                                            (key-description (nth 0 it))
+                                            (user-keys--describe-binding (nth 1 it))
+                                            (mapconcat #'identity (nth 2 it) ", "))
+                                           scanned)))
+                                (when display (list :header it
+                                                    :rows display)))
+                            (error (warn "Keymap scan failed: %s" it)))
                         (warn "Keymap could not be scanned: %s" it))
                       it)))))
 
