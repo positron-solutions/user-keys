@@ -44,25 +44,24 @@
 
 (defvar user-keys-target-buffer nil "Current buffer for inspecting bindings.")
 
+;; TODO f-keys are not currently part of a predicate
 (defconst user-keys--fkey-events
   (mapcar
    (lambda (c) (make-symbol (concat "f" (int-to-string c))))
    (number-sequence 1 20))
   "List of function key events, through F20.")
 
+;; TODO stupid events not currently used to create a predicate
 (defvar user-keys--stupid-events
   '('insert
     'pause
     'print
     'again
     'begin
-    ;; 'find
-    ;; 'help
     'insertchar
     'insertline
-    'prior
-    )
-  "Sequences should almost never end in these events.")
+    'prior)
+  "Set this to events you can't input on your keyboard.")
 
 ;; TODO exception sequences not implemented in stupid keys report
 (defvar user-keys--exception-sequences
@@ -92,16 +91,16 @@ KEY-LETERS should be a list of chars or integers."
 
 (defgroup user-keys nil "User keys.")
 
+(defcustom user-keys-buffer-name "*user-keys*"
+  "Where should we display interactive output?"
+  :type 'string
+  :group 'user-keys)
+
 (defcustom user-keys-stupid-modifiers
   '("S-" "H-" "s-" "C-M-" "M-S-" "C-M-S-")
   "Sequences should almost never require these modifier combinations.
 Modifiers are in A-C-H-M-S-s and specified in this order for valid keys"
   :type '(repeat (repeat string))
-  :group 'user-keys)
-
-(defcustom user-keys-buffer-name "*user-keys*"
-  "Where should we display interactive output?"
-  :type 'string
   :group 'user-keys)
 
 (defcustom user-keys-shifted-keys
@@ -437,7 +436,7 @@ recursive plists."
                     (lookups
                      (--map
                       (list
-                       (key-description it) ; TODO factor out description munging.
+                       (key-description it)
                        (or (when-let ((description (key-binding it t)))
                              (user-keys--describe-binding description)
                            user-keys--available-string))
@@ -507,7 +506,7 @@ recursive plists."
                    (--map (-sort #'string< it))
                    (--map ; it is a list of maps
                     (-non-nil
-                     (--map ; it is a single map
+                     (--map ; it is a single map symbol
                       (let ((binding (with-demoted-errors
                                          (keymap-lookup
                                           (if (boundp it)

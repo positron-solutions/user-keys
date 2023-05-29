@@ -7,6 +7,7 @@
 - Remove legacy keymap spam
 - Move keys that express ideas, such as =C-n=, coherently across multiple modes
 - See the current state of your preferred top-level sequences
+- Introspect modal key bindings, for both package development & configuration
 
 * Install User-Keys
 
@@ -33,12 +34,23 @@
     ;; Show the state of your preferred sequences in the current major
     ;; mode.  Use this to find out which sequences you might want to bind
     ;; next.
-    (user-keys-show-preferred)
+    (user-keys-report-preferred)
 
-    ;; See a report of all "poor" bindings and the maps that bind them.
-    (user-keys-show-poor)
+    ;; See a report of all "stupid" bindings and the maps that bind them.
+    (user-keys-report-stupid)
+
+    ;; Check for shadows for a common sequence so you can move all of it's bindings
+    ;; around at once.
+    (user-keys-report-shadows (kbd "C-n"))
+
+    ;; Show active maps, helpful for debugging modal systems such as Meow and Evil
+    (user-keys-report-active-maps)
 
   #+end_src
+
+  Like magit, but for bindings and keymaps:
+
+  #+HTML: <img src="./TODO.mp4" alt="A transient interface for inspecting bindings.">  
 
 * Contents
 :PROPERTIES:
@@ -47,9 +59,21 @@
 :CONTENTS:
 - [[#other-packages][Other Packages]]
 - [[#motivation][Motivation]]
+  - [[#against-binding-spam][Against Binding Spam]]
+  - [[#ad-hoc-conventions][Ad-hoc conventions]]
+  - [[#tree-sitter][Tree Sitter]]
+  - [[#modal-editing][Modal Editing]]
 - [[#long-term-goal][Long-Term Goal]]
-- [[#this-package-is-a-protest][This Package is a Protest]]
 - [[#correctly-communicating-about-commands-and-sequences][Correctly Communicating About Commands and Sequences]]
+- [[#the-c-c-convention-is-terrible][The C-c Convention is Terrible]]
+  - [[#please-package-authors][Please, Package Authors]]
+- [[#what-we-should-do][What We Should Do]]
+  - [[#reserve-short-sequences-for-the-user][Reserve short sequences for the user]]
+  - [[#lean-on-m-x][Lean on M-x]]
+  - [[#risc-stateful-commands-with-composition][RISC, stateful commands with composition]]
+  - [[#use-modal-interfaces-for-context-specific-commands][Use modal interfaces for context-specific commands]]
+  - [[#remove-crufty-applications-from-emacs][Remove crufty applications from Emacs]]
+  - [[#put-old-choices-into-a-package][Put old choices into a package]]
 - [[#contributing][Contributing]]
 - [[#acknowledgments][Acknowledgments]]
 :END:
@@ -60,7 +84,8 @@
    don't have a lot of pre-configured bindings, and this opens up room
    to do crazy things.
 
-   - Completions frameworks alleviate the need for complex bindings
+   - Completions frameworks alleviate the need for complex bindings because it's
+     just faster to complete the command name
    - Transient bindings (transient package) are a good way to present
      context specific bindings such as for applications like magit
    - Helpful presents bindings in a much better format when looking at
@@ -73,60 +98,90 @@
    Not all of these packages have a clear best choice, so be sure to
    research Emacs awesome and Reddit etc before adopting a
    recommendation here.
-
+   
 * Motivation
 
-  Tools like which-key and =describe-bindings= are less effective when
-  there are too many commands bound.  Many of the bindings are such
-  difficult sequences that even if you want to use the command, it's
-  faster via =M-x= completions or maybe you just rebind it than use it
-  in such a poor binding.
+  - There's too many bindings by default
+  - Changing Ad-hoc conventions like =C-n= is hard
+  - Tree sitter is motivating new kinds of editing commands, and they
+    need space to live & evolve
+  - Developing modal editing systems could user better introspection
+    tools
 
-  The timing of development was partly motivated by tree-sitter
-  adoption.  Because of tree-sitter, editing commands that are aware
-  of syntax boundaries will become common.  *The old keymaps based on
-  heuristic editing commands will need to evolve.* The influence of
-  the defaults on many ad-hoc conventions needs to be managed.
+** Against Binding Spam
+  
+   Tools like which-key and =describe-bindings= are less effective
+   when there are too many commands bound.  Having so many bindings in
+   the way or being surprised by shadows from major & minor modes
+   leads to user intimidation and calcification of things that were
+   not intended to become standards.
 
+** Ad-hoc conventions
+  
+   There is no configuration option for certain conventions, such as
+   =C-n= usually selecting the next item in a list.  Because these
+   conventions exist but are not first class, changing the binding for
+   an idea found in multiple keymaps usually requires modifying each
+   keymap.  By viewing all shadows in all maps at once, the user can
+   modify and maintain their own conventions with more awareness and
+   ease.
+  
+** Tree Sitter  
+
+   The timing of development was partly motivated by tree-sitter
+   adoption.  Because of tree-sitter, editing commands that are aware
+   of syntax boundaries will become common.  *The old keymaps based on
+   heuristic editing commands will need to evolve.* The influence of
+   the defaults on many ad-hoc conventions needs to be managed.
+
+** Modal Editing
+
+   Modal editing is complex.  The internal state of a modal editing
+   system as well as the state of the emulation maps can lead to
+   multiple reasons why a binding is active or not or how it behaves.
+   The existing introspection tools and functions for debugging are
+   not really designed to produce design-level awareness that
+   developers and advanced users need in order to work on these
+   systems.
+  
 * Long-Term Goal
 
-  Currently there are many ad-hoc conventions about which keys should
-  be bound to which kinds of commands.  =C-n= for =next-line= in the
-  default map is an example.  Moving this in all modes that express
-  their own =next-line= concept is tedious.  User-keys may later aim
-  to codify some of these abstractions so that the user can more
-  easily replace the shadowed and unshadowed versions of commands or
-  move their sequences around coherently.
+  It is possible that this package may become similar to a
+  no-littering, but for key bindings.  Maybe it should be the Magit of
+  key bindings.  Maybe it will become an editing interface for a new
+  set of modal bindings.  A lot depends on user demand.  Be sure to
+  [[https://github.com/sponsors/positron-solutions][support]] the project and help steer the direction.
 
 * Correctly Communicating About Commands and Sequences
 
-  Other users might say things like, "The C-x C-f command."  *This is wrong.*
-  There is no "C-x C-f" command.  There is a "C-x f" *key sequence* that is
-  *bound*, by default, to the *command* =find-file=.  This is a *binding*.
+  We need to fix something culturally.  Other users might say things
+  like, "The C-x C-f command."  *This is wrong.* There is no "C-x C-f"
+  command.  There is a "C-x f" *key sequence* that is *bound*, by
+  default, to the *command* =find-file=.  This is a *binding*.
 
-  - Command names point to source code and can be used as fuel for hacking new
-    commands.
+  Why you should always prefer command names when communicating:
+
+  - Command names point to source code and can be used as fuel for
+    hacking new commands.
   - Command names are named using frequent concepts from the [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Glossary.html][glossary]]
-  - Command names do not change when users rebind keys.  You can communicate
-    about commands no matter what bindings system another user has.
+  - Command names do not change when users rebind keys.  You can
+    communicate about commands no matter what bindings system another
+    user has.
   - Command names tell users more about what package they came from.
 
-  Unfortunately there seems to be no mechanism to find out what a key /was/
-  bound to in the default settings.  We can all use commands.  We cannot all
-  know what a binding means.
+  Unfortunately there seems to be no mechanism to find out what a key
+  /was/ bound to in the default settings.  We can all use commands.
+  We cannot all know what a binding means.
 
   *Command names make you and other users more successful.
   Communicate by saying command names, not key sequences.*
 
-* The C-c Convention is Completely Wrong
+* The C-c Convention is Terrible
 
-  The [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Key-Binding-Conventions.html][elisp manual]] states that only the ~C-c~ prefix should be
-  respected by all major and minor modes. This means the user is
-  expected to bind all of their preferred top-level commands behind
-  just one *prefix* sequence.  Meanwhile countless packages add
-  bindings to high-value short key sequences just because the package
-  author felt like it or it would shadow a default that the user may
-  have reconfigured.
+  The [[https://www.gnu.org/software/emacs/manual/html_node/elisp/Key-Binding-Conventions.html][elisp manual]] states that only the ~C-c~ prefix /and only with a
+  single letter/ should be respected by all major and minor
+  modes. This means the user is expected to bind all of their
+  preferred global commands behind just one *prefix* sequence.
 
   #+begin_quote
 
@@ -137,54 +192,96 @@
 
   #+end_quote
 
+  Meanwhile countless packages add bindings to high-value short key
+  sequences just because the package author felt like it or because
+  they wanted to shadow an ad-hoc convention without knowing if the
+  user reconfigured it.
+
+  Being forced to sort through massive lists of bindings with many
+  ad-hoc conventions leads to user intimidation and a calcification of
+  things that never should have been allowed to become standards.
+  
   =C-c= was never a good idea.  It is the kind of choice that occurred
   after far too much spam was protected by being legacy, a legacy that
-  was born less out of intentional design and more from a [[https://en.wikipedia.org/wiki/Ouija][ouija]] board
-  of mixed contributions.
+  emerged from mixed contributions and exhausting bike shed mailing
+  list threads that reach conclusions like a [[https://en.wikipedia.org/wiki/Ouija][ouija]] board.
 
-  There is no configuration option for certain conventions, such as
-  =C-n= usually selecting the next item in a list.  Because these
-  conventions exist but are not first class, changing the binding for
-  an idea found in multiple keymaps usually requires modifying
-  multiple keymaps.
+** Please, Package Authors  
 
-  Ultimately it seems many commands are bound only because a few users
-  wanted a shortcut at some point, possibly long ago.  Many of the
-  commands are of extremely low utility and only begin to make sense
-  if the user adopts a new range of behaviors.  Instead of letting the
-  user decide which of the commmands are useful and providing lots of
-  open space for the user to create new commands, many commands seem
-  bound "just in case."
-
-  Commands do no deserve bindings.  They are not entitled to them.  At
-  the very most, a package author should provide a keymap and then
+  Commands do not deserve bindings.  They are not entitled to them.
+  At the very most, a package author should provide a keymap and then
   tell the user how to bind that to a prefix.  We have absolutely
-  amazing command discovery these days, and spamming your commands
-  into keymaps is a terrible solution for communicating to the user
-  which of your commands are the most likely to be useful.  Stop
-  binding so many commands by default.  Publish a list in your package
-  usage documentation.
+  amazing command discovery these days.  The user doesn't need your
+  bindings.  Publish a list of commands in your package usage
+  documentation.  Put them into a context-specific application
+  interface like transient.  Avoid bad key sequences and ad-hoc
+  conventions unless it's the purpose of your package to shadow the
+  defaults.
 
-  Furthermore, the culture of protecting legacy keymap pollution leads
-  to users communicating about bindings instead of commands.  Knowing
-  a command name leads users into elisp programming and customization.
-  Knowing bindings leads to archaic, esoteric anachronisms and lingo.
-  Living with =M-x= and completions frameworks grows knowledge.  Being
-  forced to sort through massive lists of bindings with many ad-hoc
-  conventions leads to user intimidation and a calcification of things
-  that never should have been allowed to become standards.
+* What We Should Do
+
+  In addition to innovation in modal bindings that seek to sidestep
+  the entire problem altogether...
+
+** Reserve short sequences for the user  
+
+  Meta and control keys, especially on the home row, should be
+  considered sacred real-estate only available to the user.  Opening
+  up space will lower the friction for change, speeding up evolution,
+  eventually leading us to discover new things we actually want to
+  bind.
+
+** Lean on M-x  
+  
+  In the modern era of awesome M-x completions, there's almost no use
+  to bind functions beyond a certain level of rarity.  It only makes
+  sense to have short sequences bound when no M-x sequences are
+  actually very long.
+
+** RISC, stateful commands with composition  
+
+  In the global bindings, we should try to do more with a smaller set
+  of commands, similar to a RISC style of compressing the possible
+  input values but increasing the meaning of strings of values, which
+  can be composed more easily than long sequences.
+
+** Use modal interfaces for context-specific commands  
+
+  For bindings that are very context-specific, they should be moved
+  into more transient-like interfaces.  If you won't use a command
+  often, it doesn't make sense to try to use it from memory or to use
+  it non-modally.
+
+** Remove crufty applications from Emacs  
+
+  Many bindings and the applications that they are tied to should just
+  be removed from Emacs altogether and treated as independent packages
+  on the GNU ELPA.  This will lower the weight of the manual and other
+  deep integrations, making more room to grow.
+
+** Put old choices into a package  
+
+  It needs to be easier to remove default bindings without disrupting
+  legacy users, and that means using a compat package like every other
+  platform out there.  Users who want modern Emacs don't need to care.
+  Users who rely on the old ways should be served by a compat package,
+  not by carrying forward the same old legacy defaults forever.
 
 * Contributing
 
-  [[./CONTRIBUTING.org][CONTRIBUTING]] contains instructions on using this repository's functionality.
-  A DCO and GPL3 license are included with this project.
+  [[./CONTRIBUTING.org][CONTRIBUTING]] contains instructions on using this repository's
+  functionality.  A DCO and GPL3 license are included with this
+  project.
 
   Check the hacking [[./NOTES.org][NOTES]] document for some help getting started
   hacking on keymaps and bindings.  The keymap data structures
   themselves are a little bit unwieldy.
 
-  Do consider buying me a glass of champagne if you find this timer amusing.
-  Github Sponsors is configured.
+  *Github Sponsors is configured.* If you want features & support,
+  organize an international coalition of backers and each donate a
+  comfortable amount, while delegating the authority to pick
+  priorities to those who either demonstrate competence or are willing
+  to pay for what they want.
 
 * Acknowledgments
 
@@ -192,7 +289,7 @@
   Some of the built-in functions for exploring keymaps in Emacs were
   not immediately appropriate for implementing all of the ideas in
   user-keys.  =keymap-map-keys= seemed to provide a buffet of data
-  types and structures.
+  types and structures.  =kmu-map-keymap= was very helpful.
 
 # Local Variables:
 # before-save-hook: (lambda () (when (require 'org-make-toc nil t) (org-make-toc)))
