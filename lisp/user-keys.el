@@ -109,6 +109,18 @@ Modifiers are in A-C-H-M-S-s and specified in this order for valid keys"
   :type '(repeat 'character)
   :group 'user-keys)
 
+(defcustom user-keys-stupid-predicates
+  (list (user-keys-multiple-modifiers-predicate
+         "multiple modifiers")
+        (user-keys-modified-basic-events-predicate
+         user-keys--fkey-events "modified function keys")
+        ;; TODO add predicate for stupid modifiers like hyper
+        (user-keys-modified-basic-events-predicate
+         user-keys-shifted-keys "modified shift keys"))
+  "Predicates used to report stupid bindings."
+  :type '(repeat function)
+  :group 'user-keys)
+
 (defcustom user-keys-preferred-sequences
   (let ((home-row (string-to-list "asdfjkl;"))
         (other-meta (string-to-list "qwertyuiop[]\\gh'zxcvbnm,./"))
@@ -556,14 +568,7 @@ recursive plists."
                             major-mode-maps
                             minor-mode-maps))
          (other-maps (user-keys--other-maps most-maps))
-
-         (predicates (list (user-keys-multiple-modifiers-predicate
-                            "multiple modifiers")
-                           (user-keys-modified-basic-events-predicate
-                            user-keys--fkey-events "modified function keys")
-                           ;; TODO add predicate for stupid modifiers like hyper
-                           (user-keys-modified-basic-events-predicate
-                            user-keys-shifted-keys "modified shift keys")))
+         (predicates user-keys-stupid-predicates)
 
          ;; Scan each map with predicates and amend results by
          ;; appending the map name to each value.
