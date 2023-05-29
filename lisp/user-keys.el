@@ -840,7 +840,7 @@ because the input in the active maps is still a prefix."
     ("K" "set sequence" user-keys-set-sequence :transient t)]
    [:description user-keys--describe-target-buffer
     ""
-    ("b" "active buffer" user-keys-set-buffer :transient t)]])
+    ("b" "active buffer" user-keys-set-target-buffer :transient t)]])
 
 (declare-function helpful-at-point "helpful" ())
 (defun user-keys--push-button ()
@@ -859,11 +859,11 @@ Use `helpful' package if loaded."
     (define-key map "g" 'user-keys-refresh)
     (define-key map "h" 'user-keys-dispatch)
     (define-key map "?" 'user-keys-dispatch)
-    (define-key map "q" 'bury-buffer)
 
     (define-key map "k" 'user-keys-set-sequence-key)
     (define-key map "S" 'user-keys-set-sequence-string)
     (define-key map "K" 'user-keys-set-sequence)
+    (define-key map "b" 'user-keys-set-target-buffer)
 
     (define-key map "s" 'user-keys-report-shadows)
     (define-key map "p" 'user-keys-report-preferred)
