@@ -238,17 +238,34 @@ This function handles the numerous possible types of values
 that can be returned from `key-binding' and during
 `kmu-map-keymap'."
   (cond
+   ((eq nil binding)
+    nil)
    ((or (symbolp binding)
-        (stringp binding))
+           (stringp binding))
     (user-keys--maybe-button binding))
    ((keymapp binding)
     "<keymap>")
-   ((numberp binding)
-    "prefix ")
+   ((vectorp binding) ; maps to another sequence
+    (key-description binding))
+   ((numberp binding) ; sequence too long
+    (format "sequence %s keys too long for prefix" binding))
    ((kmu-menu-binding-p binding)
-    (format "menu-item - %s" (nth 2 binding)))
+    (format "menu-item - %s"
+            ;; Some menus are... weird.  Because.
+            (if (proper-list-p binding)
+                (nth 2 binding)
+              (if (consp binding)
+                  (car binding)
+                "<idk>"))))
+   ;; TODO we can sometimes get the name out.
+   ;; This was originally intended to fix up a weird menu item.
+   ((functionp binding)
+    "<function>")
    (t
-    (format "Bound to: %.20S..." binding))))
+    (let* ((str-binding (format "%S" binding)))
+      (if (> (length str-binding) 20)
+          (format "Bound to: %.20s..." s)
+        (format "Bound to: %s" str-binding))))))
 
 (defun user-keys--major-mode-keymaps ()
   "Return a list of major modes map symbols."
