@@ -69,6 +69,17 @@
                  (user-keys--maps-to-symbols
                   (list (current-global-map)) '()))))
 
+(ert-deftest user-keys--symbol-to-map-test ()
+  ;; sanity check on the number of maps in the test, about 600 with packages
+  ;; installed
+  (should (> (length (user-keys--other-maps '())) 50))
+  (should (let ((bad-maps '()))
+            (mapc (lambda (km)
+                    (unless (keymapp (user-keys--symbol-to-map km))
+                      (push km bad-maps)))
+                  (user-keys--other-maps '()))
+            (not bad-maps))))
+
 (ert-deftest user-keys--find-test ()
   ;; no predicates, empty list
   (should (equal (user-keys--find global-map nil) '(nil nil)))
