@@ -93,8 +93,7 @@
 
                   # Dependencies of elisp-repo-kit itself. These are no longer
                   # needed by your repo after cloning.
-                  epkgs.elpaPackages.project
-                  epkgs.melpaPackages.auto-compile
+                  epkgs.melpaPackages.keymap-utils
                 ]))
             ];
           });

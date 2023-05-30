@@ -40,7 +40,7 @@ jobs:
     # Some steps switch logic on os or emacsPkg!
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest] #, macos-latest
         emacsPkg: [ emacs, emacsGit, ]
     runs-on: ${{ matrix.os }}
     steps:

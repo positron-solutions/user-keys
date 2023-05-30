@@ -35,6 +35,9 @@
 (require 'derived)
 (require 'dash)
 (require 'keymap-utils)
+(require 'transient)
+
+(eval-when-compile (require 'subr-x))
 
 ;; implementation state and constants
 
