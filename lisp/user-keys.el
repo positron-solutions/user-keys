@@ -584,6 +584,7 @@ recursive plists."
                     (-non-nil
                      (--map ; it is a single map symbol
                       (let ((binding (with-demoted-errors
+                                         "couldn't get keymap for symbol %s"
                                          (keymap-lookup
                                           (user-keys--symbol-to-map it)
                                           key-str))))
@@ -836,7 +837,9 @@ because the input in the active maps is still a prefix."
    (list (let (sequence)
            (while (not sequence)
              (let ((input (read-string "Key description (for `kbd'): ")))
-               (if (with-demoted-errors (kbd input))
+               (if (with-demoted-errors
+                       "`kbd' failed for input: %s"
+                       (kbd input))
                    (setq sequence (kbd input))
                  (message "Input must be valid argument to call `kbd' function.")
                  (sit-for 3))))
