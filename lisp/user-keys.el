@@ -1,4 +1,4 @@
-;;; user-keys.el --- clean and protect your keymaps from pollution. -*- lexical-binding: t; -*-
+;;; user-keys.el --- Clean, manage, and inspect your keymaps -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2022 Positron Solutions
 
@@ -92,7 +92,8 @@ KEY-LETERS should be a list of chars or integers."
 
 ;; customize
 
-(defgroup user-keys nil "User keys.")
+(defgroup user-keys nil "Clean up, inspect, manage keymaps."
+  :group 'convenience)
 
 (defcustom user-keys-buffer-name "*user-keys*"
   "Where should we display interactive output?"
@@ -232,7 +233,7 @@ that can be returned from `key-binding' and during
    ((eq nil binding)
     nil)
    ((or (symbolp binding)
-           (stringp binding))
+        (stringp binding))
     (user-keys--maybe-button binding))
    ((keymapp binding)
     "<keymap>")
@@ -287,7 +288,8 @@ are returned."
   "Return a list of all minor mode keymaps.
 Optional ACTIVE-ONLY argument will control if only active maps
 are returned."
-  )
+  ;; TODO go find how to scan these in Ikaruga
+  (-map emulation-mode-map-alists))
 
 (defun user-keys--other-maps(keymaps)
   "Return a list of all keymaps not in KEYMAPS.
@@ -716,7 +718,7 @@ The REASON will be returned for reporters."
            (--map
             (> (length (user-keys--remove-mouse-mods
                         (event-modifiers it)))
-             1)
+               1)
             sequence))
       reason)))
 
@@ -844,14 +846,16 @@ because the input in the active maps is still a prefix."
     ("h" "toggle menu" transient-quit-one)
     ("g" "refresh" user-keys-refresh)]]
   ["Options"
-   [:description user-keys--describe-current-sequence
+   [:description
+    user-keys--describe-current-sequence
     ""
     ("k" "set sequence (key)" user-keys-set-sequence-key :transient t)
     ;; setting the sequence with `kbd' doesn't depend on active maps.
     ("S" "set sequence (string)" user-keys-set-sequence-string
      :transient t)
     ("K" "set sequence" user-keys-set-sequence :transient t)]
-   [:description user-keys--describe-target-buffer
+   [:description
+    user-keys--describe-target-buffer
     ""
     ("b" "active buffer" user-keys-set-target-buffer :transient t)]])
 
