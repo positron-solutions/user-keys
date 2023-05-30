@@ -37,8 +37,8 @@
 (require 'ert)
 (require 'user-keys)
 
-(ert-deftest user-keys--button-test ()
-  (user-keys--button 'switch-frame))
+(ert-deftest user-keys--maybe-button-test ()
+  (user-keys--maybe-button 'switch-frame))
 
 (ert-deftest user-keys--keymaps-test ()
   (should (equal (user-keys--maybe-unroll [1 2 3]) [1 2 3]))
