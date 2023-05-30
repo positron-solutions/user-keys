@@ -101,10 +101,12 @@ KEY-LETERS should be a list of chars or integers."
   :group 'user-keys)
 
 (defcustom user-keys-stupid-modifiers
-  '("S-" "H-" "s-" "C-M-" "M-S-" "C-M-S-")
-  "Sequences should almost never require these modifier combinations.
-Modifiers are in A-C-H-M-S-s and specified in this order for valid keys"
-  :type '(repeat (repeat string))
+  '(hyper super)
+  "Sequences should almost never require these modifiers.
+Valid modifiers are in A-C-H-M-S-s order.  Use `kbd', `vconcat' or
+`string-to-vector' and `event-modifiers' to translate Emacs notation to actual
+events and modifiers."
+  :type '(repeat (repeat symbol))
   :group 'user-keys)
 
 (defcustom user-keys-shifted-keys
@@ -722,6 +724,18 @@ The REASON will be returned for reporters."
             sequence))
       reason)))
 
+(defun user-keys-modifiers-predicate (modifiers reason)
+  "Return predicate matching keys with one of MODIFIERS.
+The REASON will be returned for reporters."
+  (lambda (sequence _)
+    (when (-non-nil
+           (--map
+            (when-let ((event-mods (user-keys--remove-mouse-mods
+                                    (event-modifiers it))))
+              (-non-nil (--map (member it modifiers) event-mods)))
+            sequence))
+      reason)))
+
 (defun user-keys-modified-basic-events-predicate (basic-events reason)
   "Return a predicate matching any modified use of BASIC-EVENTS.
 The REASON will be returned for reporters."
@@ -757,15 +771,15 @@ The REASON will be returned for reporters."
     (when (member description commands)
       reason)))
 
+;; TODO add exceptions
 ;; Had to move this after predicates for loading order
 (defcustom user-keys-stupid-predicates
   (list (user-keys-multiple-modifiers-predicate
          "multiple modifiers")
         (user-keys-modified-basic-events-predicate
          user-keys--fkey-events "modified function keys")
-        ;; TODO add predicate for stupid modifiers like hyper
-        ;; TODO add function keys predicate
-        ;; TODO add exceptions
+        (user-keys-modifiers-predicate user-keys-stupid-modifiers
+                                       "difficult modifiers")
         (user-keys-modified-basic-events-predicate
          user-keys-shifted-keys "modified shift keys"))
   "Predicates used to report stupid bindings."

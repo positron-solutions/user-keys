@@ -158,6 +158,22 @@
     (should (equal (user-keys--find map (list predicate))
                    '((([27 1] forward-char ("broken fingers"))) nil)))))
 
+(ert-deftest user-keys-modifiers-predicate-test ()
+  (let ((predicate (user-keys-modifiers-predicate '(hyper) "broken fingers"))
+        (map (make-sparse-keymap)))
+
+    ;; bind a modified event not in the list and no matches result
+    (define-key map (kbd "s-a") #'forward-char)
+    (should (equal (user-keys--find map (list predicate)) '(nil nil)))
+
+    ;; bind a key with a matching modifier and get a result
+
+    ;; note: view [27 1] with `key-description' as it is not normalized
+    ;; and depends on the local state of map.
+    (define-key map (kbd "H-a") #'forward-char)
+    (should (equal (user-keys--find map (list predicate))
+                   '((([16777313] forward-char ("broken fingers"))) nil)))))
+
 (ert-deftest user-keys-modified-basic-events-predicate-test ()
   (let ((predicate (user-keys-modified-basic-events-predicate
                     '(f1)
