@@ -56,7 +56,6 @@
         emacsPackages = [
           "emacsUnstable"
           "emacsGit"
-          "emacs28"
           "emacs"
         ];
 
