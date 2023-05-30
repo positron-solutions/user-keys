@@ -59,21 +59,11 @@
 :CONTENTS:
 - [[#other-packages][Other Packages]]
 - [[#motivation][Motivation]]
-  - [[#against-binding-spam][Against Binding Spam]]
-  - [[#ad-hoc-conventions][Ad-hoc conventions]]
-  - [[#tree-sitter][Tree Sitter]]
-  - [[#modal-editing][Modal Editing]]
 - [[#long-term-goal][Long-Term Goal]]
 - [[#correctly-communicating-about-commands-and-sequences][Correctly Communicating About Commands and Sequences]]
 - [[#the-c-c-convention-is-terrible][The C-c Convention is Terrible]]
   - [[#please-package-authors][Please, Package Authors]]
 - [[#what-we-should-do][What We Should Do]]
-  - [[#reserve-short-sequences-for-the-user][Reserve short sequences for the user]]
-  - [[#lean-on-m-x][Lean on M-x]]
-  - [[#risc-stateful-commands-with-composition][RISC, stateful commands with composition]]
-  - [[#use-modal-interfaces-for-context-specific-commands][Use modal interfaces for context-specific commands]]
-  - [[#remove-crufty-applications-from-emacs][Remove crufty applications from Emacs]]
-  - [[#put-old-choices-into-a-package][Put old choices into a package]]
 - [[#contributing][Contributing]]
 - [[#acknowledgments][Acknowledgments]]
 :END:
@@ -94,6 +84,8 @@
      bindings
    - Tree sitter is making more and more editing commands able to use
      the structure of text you are working on
+   - General provides lots of support for defining bindings more
+     succinctly and differentiating user-defined bindings
 
    Not all of these packages have a clear best choice, so be sure to
    research Emacs awesome and Reddit etc before adopting a
@@ -101,49 +93,49 @@
    
 * Motivation
 
-  - There's too many bindings by default
-  - Changing Ad-hoc conventions like =C-n= is hard
-  - Tree sitter is motivating new kinds of editing commands, and they
-    need space to live & evolve
-  - Developing modal editing systems could user better introspection
-    tools
+  There are too many bindings.  Everywhere.  It gets in the way of
+  progress.  It gets in the way of use.  We need tools to take back
+  control and move forward.
 
-** Against Binding Spam
-  
-   Tools like which-key and =describe-bindings= are less effective
-   when there are too many commands bound.  Having so many bindings in
-   the way or being surprised by shadows from major & minor modes
-   leads to user intimidation and calcification of things that were
-   not intended to become standards.
+  - *Empower users to modify & develop new schemes*
 
-** Ad-hoc conventions
-  
-   There is no configuration option for certain conventions, such as
-   =C-n= usually selecting the next item in a list.  Because these
-   conventions exist but are not first class, changing the binding for
-   an idea found in multiple keymaps usually requires modifying each
-   keymap.  By viewing all shadows in all maps at once, the user can
-   modify and maintain their own conventions with more awareness and
-   ease.
-  
-** Tree Sitter  
+    Built-in ways to look at bindings are not appropriate for
+    designing new bindings schemes or looking at bindings
+    systematically.  There's not a good built-in way to see sets of
+    bindings across multiple maps or the state of map activation
+    across different buffers, information that is essential for
+    designing and developing bindings schemes (such as new modal
+    schemes).
 
-   The timing of development was partly motivated by tree-sitter
-   adoption.  Because of tree-sitter, editing commands that are aware
-   of syntax boundaries will become common.  *The old keymaps based on
-   heuristic editing commands will need to evolve.* The influence of
-   the defaults on many ad-hoc conventions needs to be managed.
+  - *Give the keyboard back to the user*
 
-** Modal Editing
+    Having so many bindings in the way or being surprised by shadows
+    from major & minor modes leads to user intimidation and
+    *calcification of things that were not intended to become
+    standards.* Whether you start with Evil or defaults, the mass
+    proliferation of bad bindings gets in the way and adds risk and
+    complexity to any attempt to go your own way.  This package is
+    developed with the belief that the keyboard belongs to the user,
+    and that extra effort should be made to get out of the way.
 
-   Modal editing is complex.  The internal state of a modal editing
-   system as well as the state of the emulation maps can lead to
-   multiple reasons why a binding is active or not or how it behaves.
-   The existing introspection tools and functions for debugging are
-   not really designed to produce design-level awareness that
-   developers and advanced users need in order to work on these
-   systems.
-  
+  - *Manage Ad-hoc conventions*
+
+    There is no configuration option for certain conventions, such as
+    =C-n= usually selecting the next item in a list.  Because these
+    conventions exist but are not first class, changing the binding
+    for an idea found in multiple keymaps usually requires modifying
+    each keymap.  By viewing all shadows in all maps at once, the user
+    can modify and maintain their own conventions with more awareness
+    and ease.
+
+  - *Support Tree Sitter Migration*
+
+    The timing of development was partly motivated by tree-sitter
+    adoption.  Because of tree-sitter, editing commands that are aware
+    of syntax boundaries will become common.  *The old keymaps based
+    on heuristic editing commands will need to evolve.* We need tools
+    that make it easy to open up space and move old conventions.
+
 * Long-Term Goal
 
   It is possible that this package may become similar to a
@@ -151,13 +143,13 @@
   key bindings.  Maybe it will become an editing interface for a new
   set of modal bindings.  A lot depends on user demand.  Be sure to
   [[https://github.com/sponsors/positron-solutions][support]] the project and help steer the direction.
-
+  
 * Correctly Communicating About Commands and Sequences
 
-  We need to fix something culturally.  Other users might say things
-  like, "The C-x C-f command."  *This is wrong.* There is no "C-x C-f"
-  command.  There is a "C-x f" *key sequence* that is *bound*, by
-  default, to the *command* =find-file=.  This is a *binding*.
+  We need to fix something culturally.  Other users might say things such as,
+  "The C-x C-f command."  *This is wrong.* There is no "C-x C-f" command.  There
+  is a "C-x f" *key sequence* that is *bound*, by default, to the *command*
+  =find-file=.  This is a *binding*.
 
   Why you should always prefer command names when communicating:
 
@@ -205,7 +197,7 @@
   after far too much spam was protected by being legacy, a legacy that
   emerged from mixed contributions and exhausting bike shed mailing
   list threads that reach conclusions like a [[https://en.wikipedia.org/wiki/Ouija][ouija]] board.
-
+  
 ** Please, Package Authors  
 
   Commands do not deserve bindings.  They are not entitled to them.
@@ -217,55 +209,49 @@
   interface like transient.  Avoid bad key sequences and ad-hoc
   conventions unless it's the purpose of your package to shadow the
   defaults.
-
+  
 * What We Should Do
 
   In addition to innovation in modal bindings that seek to sidestep
   the entire problem altogether...
 
-** Reserve short sequences for the user  
+  - *Reserve short sequences for the user*
+    Meta and control keys, especially on the home row, should be
+    considered sacred real-estate only available to the user.  Opening
+    up space will lower the friction for change, speeding up evolution,
+    eventually leading us to discover new things we actually want to
+    bind.
 
-  Meta and control keys, especially on the home row, should be
-  considered sacred real-estate only available to the user.  Opening
-  up space will lower the friction for change, speeding up evolution,
-  eventually leading us to discover new things we actually want to
-  bind.
+  - *Lean on M-x*
+    In the modern era of awesome M-x completions, there's almost no use
+    to bind functions beyond a certain level of rarity.  It only makes
+    sense to have short sequences bound when no M-x sequences are
+    actually very long.
 
-** Lean on M-x  
-  
-  In the modern era of awesome M-x completions, there's almost no use
-  to bind functions beyond a certain level of rarity.  It only makes
-  sense to have short sequences bound when no M-x sequences are
-  actually very long.
+  - *RISC, stateful commands with composition*
+    In the global bindings, we should try to do more with a smaller set
+    of commands, similar to a RISC style of compressing the possible
+    input values but increasing the meaning of strings of values, which
+    can be composed more easily than long sequences.
 
-** RISC, stateful commands with composition  
+  - *Use modal interfaces for context-specific commands*
+    For bindings that are very context-specific, they should be moved
+    into more transient-like interfaces.  If you won't use a command
+    often, it doesn't make sense to try to use it from memory or to use
+    it non-modally.
 
-  In the global bindings, we should try to do more with a smaller set
-  of commands, similar to a RISC style of compressing the possible
-  input values but increasing the meaning of strings of values, which
-  can be composed more easily than long sequences.
+  - *Remove crufty applications from Emacs*
+    Many bindings and the applications that they are tied to should just
+    be removed from Emacs altogether and treated as independent packages
+    on the GNU ELPA.  This will lower the weight of the manual and other
+    deep integrations, making more room to grow.
 
-** Use modal interfaces for context-specific commands  
-
-  For bindings that are very context-specific, they should be moved
-  into more transient-like interfaces.  If you won't use a command
-  often, it doesn't make sense to try to use it from memory or to use
-  it non-modally.
-
-** Remove crufty applications from Emacs  
-
-  Many bindings and the applications that they are tied to should just
-  be removed from Emacs altogether and treated as independent packages
-  on the GNU ELPA.  This will lower the weight of the manual and other
-  deep integrations, making more room to grow.
-
-** Put old choices into a package  
-
-  It needs to be easier to remove default bindings without disrupting
-  legacy users, and that means using a compat package like every other
-  platform out there.  Users who want modern Emacs don't need to care.
-  Users who rely on the old ways should be served by a compat package,
-  not by carrying forward the same old legacy defaults forever.
+  - *Put legacy choices into a package*
+    It needs to be easier to remove default bindings without disrupting legacy
+    users, and that means using a compat package like every other platform out
+    there.  Users who want modern Emacs don't need to care.  Users who rely on the
+    old ways should be served by a compat package, not by carrying forward the
+    same old legacy defaults forever.
 
 * Contributing
 
