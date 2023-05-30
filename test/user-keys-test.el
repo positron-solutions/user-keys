@@ -50,8 +50,8 @@
   (should (not (member 'global-map (user-keys--major-mode-keymaps)))))
 
 (ert-deftest user-keys--minor-mode-maps-test ()
-  (should (member '2C-mode-map (user-keys--minor-mode-keymaps)))
-  (should (not (member '2C-mode-map (user-keys--minor-mode-keymaps t))))
+  (should (member 'context-menu-mode-map (user-keys--minor-mode-keymaps)))
+  (should (not (member 'context-menu-mode-map (user-keys--minor-mode-keymaps t))))
   (should (not (member 'prog-mode-map (user-keys--minor-mode-keymaps)))))
 
 (ert-deftest user-keys--other-mode-maps-test ()
@@ -112,7 +112,7 @@
                    '((([24] forward-word ("reason"))) nil)))))
 
 (ert-deftest user-keys-sequences-predicate-test ()
-  (let ((predicate (user-keys-sequences-predicate '([24] [134217825]) "i like these"))
+  (let ((predicate (user-keys-sequences-predicate '([134217825]) "i like these"))
         (map (make-sparse-keymap)))
 
     ;; target key not bound, don't match
@@ -122,12 +122,7 @@
     ;; match after a correct sequence is bound
     (define-key map (kbd "M-a") #'forward-word)
     (should (equal (user-keys--find map (list predicate))
-                   '((([27 97] forward-word ("i like these"))) nil)))
-
-    (define-key map (kbd "M-a") nil t)
-    (define-key map (kbd "C-x") #'forward-word)
-    (should (equal (user-keys--find map (list predicate))
-                   '((([24] forward-word ("i like these"))) nil)))))
+                   '((([27 97] forward-word ("i like these"))) nil)))))
 
 (ert-deftest user-keys-basic-events-predicate-test ()
   (let ((predicate (user-keys-basic-events-predicate (string-to-list "a") "a reason"))

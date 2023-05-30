@@ -558,11 +558,9 @@ recursive plists."
                             text-mode-map
                             prog-mode-map))
          ;; `override-global-map' appears as an emulation map.
-         (high-precedence-maps '(override-global-map))
          (major-mode-maps (user-keys--major-mode-keymaps))
          (minor-mode-maps (user-keys--minor-mode-keymaps))
          (most-maps (append '(global-map)
-                            high-precedence-maps
                             basic-mode-maps
                             major-mode-maps
                             minor-mode-maps))
@@ -574,7 +572,6 @@ recursive plists."
 
          (lookups (->>
                    `(,'(global-map)
-                     ,high-precedence-maps
                      ,basic-mode-maps
                      ,major-mode-maps
                      ,minor-mode-maps
@@ -593,7 +590,6 @@ recursive plists."
                       it)))))
 
          (sections '("Global Map"
-                     "High Precedence Maps"
                      "Basic Mode Maps"
                      "Major Mode Maps"
                      "Minor Mode Maps"
@@ -623,11 +619,9 @@ recursive plists."
                             text-mode-map
                             prog-mode-map))
          ;; `override-global-map' appears as an emulation map.
-         (high-precedence-maps '(override-global-map))
          (major-mode-maps (user-keys--major-mode-keymaps))
          (minor-mode-maps (user-keys--minor-mode-keymaps))
          (most-maps (append '(global-map)
-                            high-precedence-maps
                             basic-mode-maps
                             major-mode-maps
                             minor-mode-maps))
@@ -638,7 +632,6 @@ recursive plists."
          ;; appending the map name to each value.
          (lookups (->>
                    `((global-map)
-                     ,high-precedence-maps
                      ,basic-mode-maps
                      ,major-mode-maps
                      ,minor-mode-maps
@@ -664,7 +657,6 @@ recursive plists."
                       it)))))
 
          (sections '("Global Map"
-                     "High Precedence Maps"
                      "Basic Mode Maps"
                      "Major Mode Maps"
                      "Minor Mode Maps"
