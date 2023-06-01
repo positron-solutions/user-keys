@@ -77,7 +77,7 @@
           '(;; "--no-<check>
             ;; "--no-byte-compile"
             ;; "--no-checkdoc"
-            ;; "--no-package-lint"
+            "--no-package-lint"
             "--no-indent"
             ;; "--no-indent-character"
             ;; "--no-fill-column"
