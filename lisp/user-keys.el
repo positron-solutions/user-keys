@@ -258,7 +258,7 @@ that can be returned from `key-binding' and during
    (t
     (let* ((str-binding (format "%S" binding)))
       (if (> (length str-binding) 20)
-          (format "Bound to: %.20s..." s)
+          (format "Bound to: %.20s..." str-binding)
         (format "Bound to: %s" str-binding))))))
 
 (defun user-keys--major-mode-keymaps ()
