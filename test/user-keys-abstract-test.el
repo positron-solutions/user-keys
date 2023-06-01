@@ -93,74 +93,73 @@
    (equal
     (macroexpand
      '(user-keys-abstract-define-remap
-       ((abstract-forward "C-n" forward-word)
+       ((abstract-forward "C-q" forward-word)
         (org org-mode-map org-forward-word))))
     '(progn
-       (defun abstract-forward 'nil "Abstract command target.
-This is a global map abstract command."
+       (defun abstract-forward 'nil "Abstract command target.\nThis is a global map abstract command."
               (interactive)
               (undefined))
        (define-key global-map
-                   (kbd "C-n")
+                   (kbd "C-q")
                    #'abstract-forward)
        (define-key global-map
                    (vector 'remap #'abstract-forward)
                    #'forward-word)
-       (eval-after-load org
-         (define-key org-mode-map
-                     (kbd "C-n")
-                     nil t)
-         (define-key org-mode-map
-                     (vector 'remap #'abstract-forward)
-                     #'org-forward-word)))))
-  (should
-   (equal
-    (macroexpand
-     `(user-keys-abstract-define-remap
-       ((abstract-forward "C-n" forward-word)
-        (bar (bar-one-mode-map bar-reverse)
-             (bar-two-mode-map bar-double)))))
-    '(progn
-       (defun abstract-forward 'nil "Abstract command target.
-This is a global map abstract command."
-              (interactive)
-              (undefined))
-       (define-key global-map
-                   (kbd "C-n")
-                   #'abstract-forward)
-       (define-key global-map
-                   (vector 'remap #'abstract-forward)
-                   #'forward-word)
-       (eval-after-load bar
-         (define-key bar-one-mode-map
-                     (kbd "C-n")
-                     nil t)
-         (define-key bar-one-mode-map
-                     (vector 'remap #'abstract-forward)
-                     #'bar-reverse)
-         (define-key bar-two-mode-map
-                     (kbd "C-n")
-                     nil t)
-         (define-key bar-two-mode-map
-                     (vector 'remap #'abstract-forward)
-                     #'bar-double)))))
+       (eval-after-load 'org
+         (progn
+           (define-key org-mode-map
+                       (kbd "C-q")
+                       nil t)
+           (define-key org-mode-map
+                       (vector 'remap #'abstract-forward)
+                       #'org-forward-word))))))
 
   (should
    (equal
     (macroexpand
-     `(user-keys-abstract-define-remap
+     '(user-keys-abstract-define-remap
+       ((abstract-forward "C-n" forward-word)
+        (bar (bar-one-mode-map bar-reverse)
+             (bar-two-mode-map bar-double)))))
+    '(progn
+       (defun abstract-forward 'nil "Abstract command target.\nThis is a global map abstract command."
+              (interactive)
+              (undefined))
+       (define-key global-map
+                   (kbd "C-n")
+                   #'abstract-forward)
+       (define-key global-map
+                   (vector 'remap #'abstract-forward)
+                   #'forward-word)
+       (eval-after-load 'bar
+         (progn
+           (define-key bar-one-mode-map
+                       (kbd "C-n")
+                       nil t)
+           (define-key bar-one-mode-map
+                       (vector 'remap #'abstract-forward)
+                       #'bar-reverse)
+           (define-key bar-two-mode-map
+                       (kbd "C-n")
+                       nil t)
+           (define-key bar-two-mode-map
+                       (vector 'remap #'abstract-forward)
+                       #'bar-double))))))
+
+  (should
+   (equal
+    (macroexpand
+     '(user-keys-abstract-define-remap
        ((abstract-quit "C-g" keyboard-quit)
         (foo foo-mode-map foo-quit))
        ((abstract-forward "C-n" forward-word)
         (bar (bar-one-mode-map bar-reverse)
              (bar-two-mode-map bar-double)))))
     '(progn
-       (defun abstract-quit 'nil "Abstract command target.
-This is a global map abstract command."
+       (defun abstract-quit 'nil "Abstract command target.\nThis is a global map abstract command."
               (interactive)
               (undefined))
-       (defun abstract-forward 'nil "Abstract command target.
-This is a global map abstract command."
+       (defun abstract-forward 'nil "Abstract command target.\nThis is a global map abstract command."
               (interactive)
               (undefined))
        (define-key global-map
@@ -175,26 +174,28 @@ This is a global map abstract command."
        (define-key global-map
                    (vector 'remap #'abstract-forward)
                    #'forward-word)
-       (eval-after-load foo
-         (define-key foo-mode-map
-                     (kbd "C-g")
-                     nil t)
-         (define-key foo-mode-map
-                     (vector 'remap #'abstract-quit)
-                     #'foo-quit))
-       (eval-after-load bar
-         (define-key bar-one-mode-map
-                     (kbd "C-n")
-                     nil t)
-         (define-key bar-one-mode-map
-                     (vector 'remap #'abstract-forward)
-                     #'bar-reverse)
-         (define-key bar-two-mode-map
-                     (kbd "C-n")
-                     nil t)
-         (define-key bar-two-mode-map
-                     (vector 'remap #'abstract-forward)
-                     #'bar-double))))))
+       (eval-after-load 'foo
+         (progn
+           (define-key foo-mode-map
+                       (kbd "C-g")
+                       nil t)
+           (define-key foo-mode-map
+                       (vector 'remap #'abstract-quit)
+                       #'foo-quit)))
+       (eval-after-load 'bar
+         (progn
+           (define-key bar-one-mode-map
+                       (kbd "C-n")
+                       nil t)
+           (define-key bar-one-mode-map
+                       (vector 'remap #'abstract-forward)
+                       #'bar-reverse)
+           (define-key bar-two-mode-map
+                       (kbd "C-n")
+                       nil t)
+           (define-key bar-two-mode-map
+                       (vector 'remap #'abstract-forward)
+                       #'bar-double)))))))
 
 (provide 'user-keys-abstract-test)
 ;;; user-keys-abstract-test.el ends here.

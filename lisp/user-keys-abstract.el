@@ -236,11 +236,61 @@ global map."
               ;; with all same feature
               (let ((feature (car feature-group))
                     (shadow-remaps (-map #'cadr (cdr feature-group))))
-                `(eval-after-load ,feature ,@shadow-remaps)))))))
+                `(eval-after-load ',feature (progn ,@shadow-remaps))))))))
     ;; splice
     `(progn ,@ac-def-forms
             ,@global-remap-forms
             ,@eval-after-load-forms)))
+
+(defun user-keys-abstract-list-navigation ()
+  "WARNING!  YOU BETTER KNOW WHAT YOU ARE DOING!
+Okay, so you found this pre-alpha backage and it says it can make
+your bindings abstract, allowing you to move around `C-n' and
+`C-p' etc.  This function will do it, but it's basically a demo
+and not intended to be run in your daily driving.  This is why I
+did not bind it in a command."
+  (user-keys-abstract-define-remap
+       ((abstract-next "C-n" next-line)
+        ("subr.el" esc-map backward-list)
+        (calendar-mode calendar-mode-map calendar-backward-week)
+        (comint-mode comint-repeat-map comint-previous-prompt)
+        (company-mode (company-active-map company-select-previous-or-abort)
+                      (company-search-map company-select-previous-or-abort))
+        ;; (doc-view doc-view-mode-map doc-view-previous-line-or-previous-page)
+        (gnus gnus-summary-goto-map gnus-summary-prev-same-subject)
+        (kmacro kmacro-keymap kmacro-cycle-ring-previous)
+        (org (org-agenda-keymap org-agenda-previous-line)
+             (org-agenda-mode-map org-agenda-previous-line)
+             (org-babel-map org-babel-previous-src-block))
+        (outline (outline-mode-prefix-map outline-previous-visible-heading)
+                 (outline-navigation-repeat-map outline-previous-visible-heading))
+        (popup popup-menu-keymap popup-previous)
+        (quail quail-simple-translation-keymap quail-other-command)
+        (quail quail-translation-keymap quail-prev-translation-block))
+        ;; (menu-bar tty-menu-navigation-map tty-menu-prev-item)
+        ;; (widget widget-global-map previous-line))
+
+       ((abstract-previous "C-p" previous-line)
+
+        ("subr.el" esc-map forward-list)
+        (calendar-mode calendar-mode-map calendar-forward-week)
+        (comint-mode comint-repeat-map comint-next-prompt)
+        (company-mode (company-active-map company-select-next-or-abort)
+                      (company-search-map company-select-next-or-abort))
+        ;; (doc-view doc-view-mode-map doc-view-next-line-or-next-page)
+        (gnus gnus-summary-goto-map gnus-summary-prev-same-subject)
+        (kmacro kmacro-keymap kmacro-cycle-ring-next)
+        (org (org-agenda-keymap org-agenda-next-line)
+             (org-agenda-mode-map org-agenda-next-line)
+             (org-babel-map org-babel-next-src-block))
+        (outline (outline-mode-prefix-map outline-next-visible-heading)
+                 (outline-navigation-repeat-map outline-next-visible-heading))
+        (popup popup-menu-keymap popup-next)
+        (quail quail-simple-translation-keymap quail-other-command)
+        (quail quail-translation-keymap quail-prev-translation-block))))
+        ;; (menu-bar tty-menu-navigation-map tty-menu-prev-item)
+        ;; (widget widget-global-map next-line))))
+
 
 (provide 'user-keys-abstract)
 ;;; user-keys-abstract.el ends here
