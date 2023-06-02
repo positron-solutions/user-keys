@@ -36,6 +36,7 @@
 (require 'dash)
 (require 'keymap-utils)
 (require 'transient)
+(require 'loadhist)
 
 (eval-when-compile (require 'subr-x))
 
@@ -355,6 +356,25 @@ function encapsulates these little quirks."
             (error "Values was not a keymap: %s" symbol))
           value))
     (error (message "No keymap could be obtained from symbol: %s" symbol))))
+
+(defun user-keys--symbol-to-feature (symbol &optional ask prompt)
+  "Return the feature that will define SYMBOL.
+If ASK is non-nil, ask the user, with optional PROMPT.  This
+function attempts definitive answers first before using a
+heuristic approach and then finally asks the user to handle
+degenerate cases."
+  (or (when (featurep symbol) symbol)
+      (alist-get 'provide (assoc-string (symbol-file symbol) load-history))
+      (let ((found) ; attempt to find longest matching feature name.
+            (words (string-split (symbol-name symbol) "-")))
+        (while (and words (not found))
+          (setq words (-butlast words))
+          (setq found (locate-library (string-join words "-"))))
+        (when words (intern (string-join words "-")))) ; could create new symbols
+      (when ask
+        (read-feature
+         (or prompt
+             "Feature loading inference failed.  Please select correct feature:")))))
 
 (defsubst user-keys--normalize-sequence (sequence)
   "Round trip the SEQUENCE to eliminate common prefix effect.

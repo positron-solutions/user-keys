@@ -229,6 +229,16 @@
 (ert-deftest user-keys-report-shadows-test ()
     (user-keys-report-shadows [24]))
 
+(ert-deftest user-keys--symbol-to-feature-test ()
+  (should
+   (eq (user-keys--symbol-to-feature 'org-really-long-fake-symbol) 'org))
+  (should
+   (eq (user-keys--symbol-to-feature 'backquote) 'backquote))
+  (should
+   (eq (user-keys--symbol-to-feature 'backquote-fake-symbol) 'backquote))
+  (should
+   (eq (user-keys--symbol-to-feature 'this-symbol-does-not-exist) nil)))
+
 (provide 'user-keys-test)
 ;;; user-keys-test.el ends here.
 
