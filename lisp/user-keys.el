@@ -308,7 +308,8 @@ KEYMAP-LISTS is a list of lists of map symbols."
     (mapatoms (lambda (a) (when (or (keymapp a)
                                (and (boundp a) (keymapp (symbol-value a)))
                                (and (fboundp a) (keymapp (symbol-function a))))
-                       (unless (gethash a known-keymaps)
+                       (unless (or (indirect-function a) ; obsolete symbol
+                                   (gethash a known-keymaps))
                          (puthash a a other-keymaps)))))
     (--remove (member it user-keys-ignore-maps) (hash-table-keys other-keymaps))))
 
