@@ -314,6 +314,30 @@ KEYMAP-LISTS is a list of lists of map symbols."
                          (puthash a a other-keymaps)))))
     (--remove (member it user-keys-ignore-maps) (hash-table-keys other-keymaps))))
 
+(defun user-keys--default-maps ()
+  "Expand and return user-keys-default-maps.
+This is a list of elements, each a list of a heading string and a
+list of maps."
+  (let* ((basic-mode-maps '(special-mode-map
+                            text-mode-map
+                            prog-mode-map))
+         ;; `override-global-map' appears as an emulation map.
+         (major-mode-maps (user-keys--major-mode-keymaps))
+         (minor-mode-maps (user-keys--minor-mode-keymaps))
+         (most-maps (append '(global-map)
+                            basic-mode-maps
+                            major-mode-maps
+                            minor-mode-maps))
+         (other-maps (user-keys--other-maps most-maps)))
+    `(("Gobal Map" (global-map))
+      ("Basic Mode Maps" ,basic-mode-maps)
+      ("Major Mode Maps" ,major-mode-maps)
+      ("Minor Mode Maps" ,minor-mode-maps)
+      ;; TODO support overriding maps,
+      ;; support showing maps in lookup order.
+      ;; TODO emulation maps...
+      ("Other Maps" ,other-maps))))
+
 (defun user-keys--maps-to-symbols (maps symbols)
   "Find which SYMBOLS refer to keymaps in MAPS.
 Also return any maps that didn't match.
@@ -570,59 +594,42 @@ recursive plists."
                           :data ,local-lookups)))
     (user-keys--render-report report)))
 
-(defun user-keys-report-shadows (sequence)
-  "Show all keymaps that potentially could shadow SEQUENCE."
+(defun user-keys-report-shadows (sequence &optional maps)
+  "Show all keymaps that potentially could shadow SEQUENCE.
+MAPS is a list of `(SECTION MAP)' forms.  See
+`user-keys--default-maps'."
   (interactive (list (or user-keys-sequence
                          (call-interactively
                           #'user-keys-set-sequence-key))))
-  (let* ((basic-mode-maps '(special-mode-map
-                            text-mode-map
-                            prog-mode-map))
-         ;; `override-global-map' appears as an emulation map.
-         (major-mode-maps (user-keys--major-mode-keymaps))
-         (minor-mode-maps (user-keys--minor-mode-keymaps))
-         (most-maps (append '(global-map)
-                            basic-mode-maps
-                            major-mode-maps
-                            minor-mode-maps))
-         (other-maps (user-keys--other-maps most-maps))
 
-         ;; `keymap-lookup' uses string input.  `lookup-key' doc string
+  (let* (;; `keymap-lookup' uses string input.  `lookup-key' doc string
          ;; says to prefer `keymap-lookup'.
          (key-str (key-description sequence))
-
-         (lookups (->>
-                   `(,'(global-map)
-                     ,basic-mode-maps
-                     ,major-mode-maps
-                     ,minor-mode-maps
-                     ,other-maps)
-                   (--map (-sort #'string< it))
-                   (--map ; it is a list of maps
-                    (-non-nil
-                     (--map ; it is a single map symbol
-                      (let ((binding (with-demoted-errors
-                                         "couldn't get keymap for symbol %s"
+         (data
+          (->>
+           (or maps (user-keys--default-maps))
+           (--map
+            (-when-let*
+                (((section maps) it)
+                 (maps (-sort (lambda (l r) (string< (symbol-name l)
+                                                (symbol-name r)))
+                              maps))
+                 (lookups
+                  (->> maps
+                       (--map ; it is a single map symbol
+                        (let ((binding (with-demoted-errors
+                                           "couldn't get keymap for symbol %s"
                                          (keymap-lookup
                                           (user-keys--symbol-to-map it)
                                           key-str))))
-                        (when binding
-                          (list it (user-keys--describe-binding binding))))
-                      it)))))
+                          (when binding
+                            (list it (user-keys--describe-binding binding)))))
+                       (-non-nil))))
+              (list
+               :header section
+               :rows lookups)))
+           (-non-nil)))
 
-         (sections '("Global Map"
-                     "Basic Mode Maps"
-                     "Major Mode Maps"
-                     "Minor Mode Maps"
-                     ;; TODO support overriding maps,
-                     ;; support showing maps in lookup order.
-                     "Other Maps"))
-         (data (->>
-                (-zip sections lookups)
-                (--map (when (cdr it) (list
-                                       :header (car it)
-                                       :rows (cdr it))))
-                (-non-nil)))
          (report `(:title
                    ,(format
                      "Shadows for %s"
@@ -633,64 +640,32 @@ recursive plists."
 (defun user-keys-report-stupid ()
   "Show all of the stupid key sequences that are currently bound."
   (interactive)
-  ;; scan all keymaps and present each one as a section.
-  ;; TODO it may be more user friendly to look at a single keymap or
-  ;; buffer to see the preferred and stupid bindings.
-  (let* ((basic-mode-maps '(special-mode-map
-                            text-mode-map
-                            prog-mode-map))
-         ;; `override-global-map' appears as an emulation map.
-         (major-mode-maps (user-keys--major-mode-keymaps))
-         (minor-mode-maps (user-keys--minor-mode-keymaps))
-         (most-maps (append '(global-map)
-                            basic-mode-maps
-                            major-mode-maps
-                            minor-mode-maps))
-         (other-maps (user-keys--other-maps most-maps))
-         (predicates user-keys-stupid-predicates)
-
-         ;; Scan each map with predicates and amend results by
-         ;; appending the map name to each value.
-         (lookups (->>
-                   `((global-map)
-                     ,basic-mode-maps
-                     ,major-mode-maps
-                     ,minor-mode-maps
-                     ,other-maps)
-                   (--map (-sort #'string< it))
-                   (--map               ; it is a list of map symbols
-                    (-non-nil
-                     (--map             ; it is a single map symbol
-                      (if-let ((map (user-keys--symbol-to-map it)))
-                          (condition-case error
-                              (when-let ((scanned (car (user-keys--find map predicates)))
-                                         (display
-                                          (--map
-                                           (list
-                                            (key-description (nth 0 it))
-                                            (user-keys--describe-binding (nth 1 it))
-                                            (mapconcat #'identity (nth 2 it) ", "))
-                                           scanned)))
-                                (when display (list :header it
-                                                    :rows display)))
-                            (error (warn "Keymap scan failed: %s" it)))
-                        (warn "Keymap could not be scanned: %s" it))
-                      it)))))
-
-         (sections '("Global Map"
-                     "Basic Mode Maps"
-                     "Major Mode Maps"
-                     "Minor Mode Maps"
-                     "Other Maps"))
-         (data (->>
-                (-zip sections lookups)
-                (--map (when (cdr it) (list
-                                       :header (car it)
-                                       :rows (cdr it))))
-                (-non-nil)))
-         (report `(:title "Stupid Keys - bindings that should just not"
-                   :data ,data)))
-    (user-keys--render-report report)))
+  (user-keys--render-report
+   `(:title
+     "Stupid Keys - bindings that should just not"
+     :data
+     ,(->>
+       (user-keys--default-maps)
+       (-map
+        (-lambda ((section maps))
+          (when-let
+              ((data (->>
+                      maps
+                      (--map
+                       (when-let ((map (user-keys--symbol-to-map it))
+                                  (scanned (car (user-keys--find map user-keys-stupid-predicates)))
+                                  (display (--map
+                                            (list
+                                             (key-description (nth 0 it))
+                                             (user-keys--describe-binding (nth 1 it))
+                                             (mapconcat #'identity (nth 2 it) ", "))
+                                            scanned)))
+                         (when display (list :header it
+                                             :rows display))))
+                      (-non-nil))))
+            (list
+             :header section
+             :rows data))))))))
 
 (defun user-keys-generate-unbinds (output-type)
   "Generate an unbinding expression for OUTPUT-TYPE."

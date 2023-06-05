@@ -226,6 +226,9 @@
     (should (equal (user-keys--find map (list predicate))
                    '((([97] forward-char ("too forward thinking"))) nil)))))
 
+(ert-deftest user-keys--default-maps-test ()
+  (should (equal (cadr (car (user-keys--default-maps))) '(global-map))))
+
 (ert-deftest user-keys-report-shadows-test ()
     (user-keys-report-shadows [24]))
 
