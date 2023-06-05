@@ -164,7 +164,12 @@ what the outputs mean in Emacs style key sequence notation."
 (defcustom user-keys-ignore-maps '(yank-menu
                                    xterm-function-map
                                    key-translation-map
-                                   function-key-map)
+                                   function-key-map
+                                   ;; TODO widget-global-map is buffer local,
+                                   ;; usually a clone of the global map.  We
+                                   ;; will need to optionally filter maps when
+                                   ;; looking at a buffer
+                                   widget-global-map)
   "Some maps are simultaneously very weird and not very useful.
 In particular, maps that cause errors because of, for example,
 failing the `keymapp' test after autoloaded but not before,
@@ -309,7 +314,10 @@ KEYMAP-LISTS is a list of lists of map symbols."
     (mapatoms (lambda (a) (when (or (keymapp a)
                                (and (boundp a) (keymapp (symbol-value a)))
                                (and (fboundp a) (keymapp (symbol-function a))))
-                       (unless (or (indirect-function a) ; obsolete symbol
+                       ;; TODO the local variable logic needs to only remove
+                       ;; symbols that point to duplicate values.
+                       (unless (or (local-variable-if-set-p a) ; filters some duplicate maps
+                                   (indirect-function a)       ; obsolete symbol
                                    (gethash a known-keymaps))
                          (puthash a a other-keymaps)))))
     (--remove (member it user-keys-ignore-maps) (hash-table-keys other-keymaps))))
@@ -640,6 +648,10 @@ MAPS is a list of `(SECTION MAP)' forms.  See
 (defun user-keys-report-stupid ()
   "Show all of the stupid key sequences that are currently bound."
   (interactive)
+  ;; TODO esc-map actually defines a lot of double modifiers.  This is because
+  ;; of some esoteric implementation detail probably, but it means we can't scan
+  ;; the esc-map with the same
+
   (user-keys--render-report
    `(:title
      "Stupid Keys - bindings that should just not"
