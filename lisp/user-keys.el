@@ -164,6 +164,11 @@ what the outputs mean in Emacs style key sequence notation."
 (defcustom user-keys-ignore-maps '(yank-menu
                                    xterm-function-map
                                    key-translation-map
+                                   ;; handled via special case of global map.
+                                   ;; See `user-keys--find'.  Direct lookups in
+                                   ;; the global map see a meta offset of the
+                                   ;; `esc-map'.
+                                   esc-map
                                    function-key-map
                                    ;; TODO widget-global-map is buffer local,
                                    ;; usually a clone of the global map.  We
@@ -428,6 +433,37 @@ with multiple keys even though the simple `kbd' result is just one key."
   "Remove mouse modifiers from MODIFIERS."
   (--remove (member it '(click drag down)) modifiers))
 
+(defun user-keys--esc-offset-event (event)
+  "Apply meta to the EVENT."
+  (event-apply-modifier event 'meta 27 "M-"))
+
+(defun user-keys--esc-offset-sequence (sequence)
+  "Add a meta prefix to the SEQUENCE.
+Predicates expect to work on the full sequence.  The `kmu'
+package could use some help here to support the special case of
+the `esc-map' effectively existing as modified sequences in the
+global map.  To emulate this, we apply a meta modifier to the
+first event in the sequence unless it already has a meta
+modifier."
+  (condition-case error
+      ;; don't handle degenerate empty sequence
+      (let* ((first (aref sequence 0))
+             (unroll (and (consp first) (atom (cdr first))))
+             (has-meta (member 'meta (event-modifiers
+                                      (if unroll (car first) first)))))
+        (if has-meta
+            sequence
+          (let ((sequence sequence))
+            (aset sequence 0
+                  (if unroll
+                      (cons (user-keys--esc-offset-event (car first))
+                            (user-keys--esc-offset-event (cdr first)))
+                    (user-keys--esc-offset-event first)))
+            sequence)))
+    (error
+     (message "user-keys: offset sequence with meta failed: %s" sequence)
+     sequence)))
+
 (defun user-keys--find (keymap seq-predicates &optional exclude-predicates)
   "Find all sequences in KEYMAP matched by SEQ-PREDICATES.
 
@@ -452,10 +488,14 @@ list of basic events respectively.
 Each predicate can return a reason, and multiple reasons will be
 output into the buffer during analysis of bad keys.  This is for
 easier design and debugging of rules."
-  (let (matches match-excludes)
+  (let (matches
+        match-excludes
+        (esc-mode (eq keymap esc-map)))
     (kmu-map-keymap
      (lambda (sequence definition)
-       (let ((orig-sequence sequence)
+       (let ((sequence (if esc-mode (user-keys--esc-offset-sequence sequence)
+                         sequence))
+             (orig-sequence sequence)
              (sequence
               (condition-case error
                   (user-keys--normalize-sequence
@@ -472,7 +512,16 @@ easier design and debugging of rules."
                                                 seq-predicates))))
              (push (list orig-sequence definition reasons) matches)))))
      keymap)
-    (list matches match-excludes)))
+
+    ;; Special case, treat all esc-map entries as their meta-key offset
+    ;; sequences in the global map.  Skip the esc-map entirely via
+    ;; `user-keys-ignore-maps'.
+    (if (eq keymap global-map)
+        (pcase-let ((`(,esc-matches ,esc-match-excludes)
+                     (user-keys--find esc-map seq-predicates exclude-predicates)))
+          (list (append matches esc-matches)
+                (append match-excludes esc-match-excludes)))
+      (list matches match-excludes))))
 
 (defun user-keys--render-report (report)
   "Generic output function for similar-ishly structured reports.

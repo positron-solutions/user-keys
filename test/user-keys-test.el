@@ -242,6 +242,14 @@
   (should
    (eq (user-keys--symbol-to-feature 'this-symbol-does-not-exist) nil)))
 
+(ert-deftest user-keys--esc-offset-sequence ()
+  (should
+   (equal (user-keys--esc-offset-sequence [paste]) [M-paste]))
+  (should
+   (equal (user-keys--esc-offset-sequence [97]) [134217825]))
+  (should
+   (equal (user-keys--esc-offset-sequence [(97 . 98)]) [(134217825 . 134217826)])))
+
 (provide 'user-keys-test)
 ;;; user-keys-test.el ends here.
 
