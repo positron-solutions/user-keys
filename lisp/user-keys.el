@@ -762,6 +762,13 @@ The REASON will be returned for reporters."
     (message "sequence: %s" sequence)
     (when (member sequence sequences) reason)))
 
+(defun user-keys-sequence-too-long-predicate (max-length reason)
+  "Return predicate matching sequences with too many keys.
+MAX-LENGTH is the longest length that is not stupid.  The REASON
+will be returned for reporters."
+  (lambda (sequence _)
+    (when (> (length sequence) max-length) reason)))
+
 (defun user-keys-multiple-modifiers-predicate (reason)
   "Return predicate matching keys with multiple modifiers.
 The REASON will be returned for reporters."
@@ -830,6 +837,7 @@ The REASON will be returned for reporters."
          user-keys--fkey-events "modified function keys")
         (user-keys-modifiers-predicate user-keys-stupid-modifiers
                                        "difficult modifiers")
+        (user-keys-sequence-too-long-predicate 2 "sequence too long")
         (user-keys-modified-basic-events-predicate
          user-keys-shifted-keys "modified shift keys"))
   "Predicates used to report stupid bindings."

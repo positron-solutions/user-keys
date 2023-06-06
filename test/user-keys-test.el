@@ -124,6 +124,20 @@
     (should (equal (user-keys--find map (list predicate))
                    '((([27 97] forward-word ("i like these"))) nil)))))
 
+(ert-deftest user-keys-sequence-too-long-predicate-test ()
+  (let ((predicate (user-keys-sequence-too-long-predicate 2 "don't have all day"))
+        (map (make-sparse-keymap)))
+
+    ;; target key with a sequence not too long
+    (define-key map (kbd "C-a C-c") #'forward-char)
+    (should (equal (user-keys--find map (list predicate)) '(nil nil)))
+
+    ;; match after a correct sequence is bound
+    (define-key map (kbd "C-s C-t u") #'forward-word)
+    (should (equal (user-keys--find map (list predicate))
+                   '((([19 20 117] forward-word ("don't have all day"))) nil)))))
+
+
 (ert-deftest user-keys-basic-events-predicate-test ()
   (let ((predicate (user-keys-basic-events-predicate (string-to-list "a") "a reason"))
         (map (make-sparse-keymap)))
