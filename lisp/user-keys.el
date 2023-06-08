@@ -201,6 +201,7 @@ wrong buffer's context."
   `(progn
      (set-buffer (user-keys--get-buffer))
      (setq buffer-read-only nil)
+     (setq-local truncate-lines t)
      (condition-case form-value
          (progn ,@body)
        ((debug error)
