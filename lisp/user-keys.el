@@ -242,10 +242,10 @@ probably should be clickable."
   "Return a formatted representation of what the BINDING for a key is.
 This function handles the numerous possible types of values
 that can be returned from `key-binding' and during
-`kmu-map-keymap'."
+`kmu-map-keymap'.  Outputs must be strings."
   (cond
    ((eq nil binding)
-    nil)
+    "nil")
    ((or (symbolp binding)
         (stringp binding))
     (user-keys--maybe-button binding))
@@ -579,12 +579,8 @@ recursive plists."
                (widths (-map
                         (lambda (n)
                           (1+ (-max (--map
-                                     ;; TODO munge this beforehand so we don't
-                                     ;; ever need to convert
                                      (let ((item (nth n it)))
-                                       (if (stringp item)
-                                           (length item)
-                                         (length (format "%s" item))))
+                                       (length item))
                                      rows))))
                         (number-sequence 0 (1- ncols)))))
           (--each rows
