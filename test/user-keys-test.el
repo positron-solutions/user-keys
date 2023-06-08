@@ -264,6 +264,20 @@
   (should
    (equal (user-keys--esc-offset-sequence [(97 . 98)]) [(134217825 . 134217826)])))
 
+(ert-deftest user-keys--real-kbd-mods-test ()
+  (should
+   ;; strip phantom mod and obtain nothing
+   (equal (user-keys--real-kbd-mods (kbd "C-m")) nil))
+  (should
+   ;; return correct modifiers after stripping phantom mod
+   (equal (user-keys--real-kbd-mods (kbd "C-M-[") '(meta))))
+  (should
+   ;; no modifiers, no problem
+   (equal (user-keys--real-kbd-mods (kbd "m")) nil))
+  (should
+   ;; don't remove non-phantom control
+   (equal (user-keys--real-kbd-mods (kbd "C-j")) '(control))))
+
 (provide 'user-keys-test)
 ;;; user-keys-test.el ends here.
 

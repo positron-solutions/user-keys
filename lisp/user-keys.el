@@ -433,6 +433,17 @@ with multiple keys even though the simple `kbd' result is just one key."
   "Remove mouse modifiers from MODIFIERS."
   (--remove (member it '(click drag down)) modifiers))
 
+(defun user-keys--real-kbd-mods (key)
+  "Remove extraneous modifiers from KEY.
+This is for counting the real number of modifiers requiring the
+user to press a modifier key."
+  (let* ((mods (user-keys--remove-mouse-mods (event-modifiers key)))
+         (basic-type (event-basic-type key))
+         (phantom-ctl (and (member basic-type '(91 93 105 109))
+                           (member 'control mods))))
+    (if phantom-ctl (remove 'control mods)
+      mods)))
+
 (defun user-keys--esc-offset-event (event)
   "Apply meta to the EVENT."
   (event-apply-modifier event 'meta 27 "M-"))
@@ -773,12 +784,10 @@ will be returned for reporters."
   "Return predicate matching keys with multiple modifiers.
 The REASON will be returned for reporters."
   (lambda (sequence _)
-    (when (-non-nil
-           (--map
-            (> (length (user-keys--remove-mouse-mods
-                        (event-modifiers it)))
-               1)
-            sequence))
+    (when
+        (-non-nil
+         (--map (> (length (user-keys--real-kbd-mods it)) 1)
+                sequence))
       reason)))
 
 (defun user-keys-modifiers-predicate (modifiers reason)
