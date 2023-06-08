@@ -778,7 +778,10 @@ The REASON will be returned for reporters."
 MAX-LENGTH is the longest length that is not stupid.  The REASON
 will be returned for reporters."
   (lambda (sequence _)
-    (when (> (length sequence) max-length) reason)))
+    (when (and (not (memeber (aref sequence 0))
+                    '(mode-line menu-bar))
+               (> (length sequence) max-length))
+      reason)))
 
 (defun user-keys-multiple-modifiers-predicate (reason)
   "Return predicate matching keys with multiple modifiers.
