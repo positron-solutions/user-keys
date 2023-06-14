@@ -736,14 +736,18 @@ MAPS is a list of `(SECTION MAP)' forms.  See
               ((data (->>
                       maps
                       (--map
-                       (when-let ((map (user-keys--symbol-to-map it))
-                                  (scanned (car (user-keys--find map user-keys-stupid-predicates)))
-                                  (display (--map
-                                            (list
-                                             (key-description (nth 0 it))
-                                             (user-keys--describe-binding (nth 1 it))
-                                             (mapconcat #'identity (nth 2 it) ", "))
-                                            scanned)))
+                       (when-let
+                           ((map (user-keys--symbol-to-map it))
+                            (scanned (car (user-keys--find
+                                           map
+                                           user-keys-stupid-predicates
+                                           user-keys-stupid-exception-predicates)))
+                            (display (--map
+                                      (list
+                                       (key-description (nth 0 it))
+                                       (user-keys--describe-binding (nth 1 it))
+                                       (mapconcat #'identity (nth 2 it) ", "))
+                                      scanned)))
                          (when display (list :header it
                                              :rows display))))
                       (-non-nil))))
@@ -859,6 +863,16 @@ The REASON will be returned for reporters."
             sequence))
       reason)))
 
+(defun user-keys-all-esc-predicate (sequence _)
+  "Match if all keys in the SEQUENCE some variant of the ESC key."
+  (unless (seq-find (lambda (k) (not (member k '(27 escape)))) sequence)
+    "All escape."))
+
+(defun user-keys-tool-bar-predicate (sequence _)
+  "Match if SEQUENCE begins with a mouse event."
+  (when (member (event-basic-type (aref sequence 0)) '(tool-bar))
+    "Mouse event."))
+
 (defun user-keys-commands-predicate (commands reason)
   "Return a predicate matching COMMANDS.
 The REASON will be returned for reporters."
@@ -867,7 +881,6 @@ The REASON will be returned for reporters."
     (when (member description commands)
       reason)))
 
-;; TODO add exceptions
 ;; Had to move this after predicates for loading order
 (defcustom user-keys-stupid-predicates
   (list (user-keys-multiple-modifiers-predicate
@@ -881,7 +894,16 @@ The REASON will be returned for reporters."
          "expanding modifiers")
         (user-keys-modified-basic-events-predicate
          user-keys-shifted-keys "modified shift keys"))
-  "Predicates used to report stupid bindings."
+  "Predicates that match and report stupid bindings."
+  :type '(repeat function)
+  :group 'user-keys)
+
+(defcustom user-keys-stupid-exception-predicates
+  (list #'user-keys-all-esc-predicate
+        #'user-keys-tool-bar-predicate)
+  "Predicates that except bindings from the stupid dragnet.
+Use this to avoid writing stupid predicates with excessively
+intelligent over-design.  intelligently."
   :type '(repeat function)
   :group 'user-keys)
 
