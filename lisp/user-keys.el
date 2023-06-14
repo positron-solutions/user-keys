@@ -305,12 +305,23 @@ are returned."
               nil))
           minor-mode-map-alist)))
 
+(defun user-keys--prefix-keymaps ()
+  "Return all prefix commands.
+These are functions which return keymaps.  Binding to them
+implements prefix maps."
+  (kmu-prefix-command-list))
+
 (defun user-keys--emulation-keymaps (&optional active-only)
   "Return a list of all minor mode keymaps.
 Optional ACTIVE-ONLY argument will control if only active maps
 are returned."
-  ;; TODO go find how to scan these in Ikaruga
-  (-map emulation-mode-map-alists))
+  (-flatten
+   (-non-nil
+    (--map
+     (-non-nil
+      (--map (kmu-keymap-variable (cdr it))
+             (if (symbolp it) (symbol-value it) it)))
+     emulation-mode-map-alists))))
 
 (defun user-keys--other-maps(keymaps)
   "Return a list of all keymaps not in KEYMAPS.
@@ -335,6 +346,29 @@ KEYMAP-LISTS is a list of lists of map symbols."
                          (puthash a a other-keymaps)))))
     (--remove (member it user-keys-ignore-maps) (hash-table-keys other-keymaps))))
 
+(defun user-keys--check-intersections ()
+  "Diagnostic function for debugging map lists.
+Should return a list of empty lists.  If not check the
+permutation and find out why the classification overlapped."
+  (let* ((map-funcs '(user-keys--major-mode-keymaps
+                      user-keys--minor-mode-keymaps
+                      user-keys--prefix-keymaps
+                      user-keys--emulation-keymaps))
+         (most-maps (-flatten (-map #'funcall map-funcs)))
+         (other-maps-func (lambda () (user-keys--other-maps most-maps)))
+         (map-funcs (append map-funcs (list other-maps-func))))
+    (--map
+     (cons (list (car it) (cdr it))
+           (length (-intersection (funcall (car it)) (funcall (cdr it)))))
+     (-flatten
+      (--map
+       (let ((outer it))
+         (pop map-funcs)
+         (--map
+          (cons outer it)
+          map-funcs))
+       (seq-copy map-funcs))))))
+
 (defun user-keys--default-maps ()
   "Expand and return user-keys-default-maps.
 This is a list of elements, each a list of a heading string and a
@@ -345,18 +379,23 @@ list of maps."
          ;; `override-global-map' appears as an emulation map.
          (major-mode-maps (user-keys--major-mode-keymaps))
          (minor-mode-maps (user-keys--minor-mode-keymaps))
+         (prefix-maps (user-keys--prefix-keymaps))
+         (emulation-maps (user-keys--emulation-keymaps))
          (most-maps (append '(global-map)
                             basic-mode-maps
                             major-mode-maps
-                            minor-mode-maps))
+                            minor-mode-maps
+                            prefix-maps
+                            emulation-maps))
          (other-maps (user-keys--other-maps most-maps)))
     `(("Gobal Map" (global-map))
       ("Basic Mode Maps" ,basic-mode-maps)
       ("Major Mode Maps" ,major-mode-maps)
       ("Minor Mode Maps" ,minor-mode-maps)
+      ("Prefix Maps" ,prefix-maps)
+      ("Emulation Maps" ,emulation-maps)
       ;; TODO support overriding maps,
       ;; support showing maps in lookup order.
-      ;; TODO emulation maps...
       ("Other Maps" ,other-maps))))
 
 (defun user-keys--maps-to-symbols (maps symbols)
