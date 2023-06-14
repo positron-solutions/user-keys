@@ -249,8 +249,12 @@ that can be returned from `key-binding' and during
    ((or (symbolp binding)
         (stringp binding))
     (user-keys--maybe-button binding))
+   ((kmu-prefix-command-p binding)
+    (user-keys--maybe-button (kmu-prefix-command-p binding)))
    ((keymapp binding)
-    "<keymap>")
+    (if (kmu-keymap-variable binding)
+        (user-keys--maybe-button (kmu-prefix-command-p binding))
+      "<anonymous keymap>"))
    ((vectorp binding) ; maps to another sequence
     (key-description binding))
    ((numberp binding) ; sequence too long
@@ -262,9 +266,11 @@ that can be returned from `key-binding' and during
                 (nth 2 binding)
               (if (consp binding)
                   (car binding)
-                "<idk>"))))
+                "%.20S..." binding))))
    ;; TODO we can sometimes get the name out.
    ;; This was originally intended to fix up a weird menu item.
+   ((compiled-function-p binding)
+    "<compiled-function>")
    ((functionp binding)
     "<function>")
    (t
