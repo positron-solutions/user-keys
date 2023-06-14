@@ -627,6 +627,10 @@ recursive plists."
         ;; are known, just before inserting rows.  Probably
         ;; requires backup up in the buffer and popping a mark.
 
+        ;; TODO let's unmix formatting and the structural aspects of rendering
+        ;; and data plumbing.  To support rendering unbinds, the core rendering
+        ;; logic needs to be factored out.
+
         ;; column information needs to be extracted prior to
         ;; rendering any rows.
         (let* ((ncols (-max (-map #'length rows)))
@@ -742,7 +746,8 @@ MAPS is a list of `(SECTION MAP)' forms.  See
                                           (user-keys--symbol-to-map it)
                                           key-str))))
                           (when binding
-                            (list it (user-keys--describe-binding binding)))))
+                            (list (user-keys--maybe-button it)
+                                  (user-keys--describe-binding binding)))))
                        (-non-nil))))
               (list
                :header section
