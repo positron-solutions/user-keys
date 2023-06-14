@@ -240,6 +240,30 @@
     (should (equal (user-keys--find map (list predicate))
                    '((([97] forward-char ("too forward thinking"))) nil)))))
 
+(ert-deftest user-keys-expanding-modifiers-predicate-test ()
+  (let ((predicate (user-keys-expanding-modifiers-predicate
+                    "amputated my fingers"))
+        (map (make-sparse-keymap)))
+
+    ;; bind decreasing modifiers, no problem
+    (define-key map (kbd "A-C-H-M-s-f A-C-H-M-c C-M-d q") #'backward-char)
+    (should (equal (user-keys--find map (list predicate)) '(nil nil)))
+
+    ;; bind no modifiers, no problem
+    (define-key map (kbd "n") #'backward-char)
+    (should (equal (user-keys--find map (list predicate)) '(nil nil)))
+
+    ;; bind phantom modifier, no problem (using C-m or RET)
+    (define-key map (kbd "M-q C-M-m") #'backward-char)
+    (should (equal (user-keys--find map (list predicate)) '(nil nil)))
+
+    ;; bind increasingly weird modifiers, problem
+    (define-key map (kbd "C-f C-M-q C-H-M-z") #'forward-char)
+    (should (equal (user-keys--find map (list predicate))
+                   '((([6 27 17 27 16777242]
+                       forward-char ("amputated my fingers")))
+                     nil)))))
+
 (ert-deftest user-keys--default-maps-test ()
   (should (equal (cadr (car (user-keys--default-maps))) '(global-map))))
 

@@ -436,6 +436,14 @@ with multiple keys even though the simple `kbd' result is just one key."
               it)
             sequence)))
 
+(defun user-keys--sequence-mouse-p (sequence)
+  "Return non-nil if SEQUENCE has mouse events."
+  (or (member (aref sequence 0) '(menu-bar))
+      (-non-nil (--map (-intersection
+                        '(click down drag)
+                        (event-modifiers it))
+                       sequence))))
+
 (defun user-keys--remove-mouse-mods (modifiers)
   "Remove mouse modifiers from MODIFIERS."
   (--remove (member it '(click drag down)) modifiers))
@@ -781,8 +789,7 @@ The REASON will be returned for reporters."
 MAX-LENGTH is the longest length that is not stupid.  The REASON
 will be returned for reporters."
   (lambda (sequence _)
-    (when (and (not (memeber (aref sequence 0))
-                    '(mode-line menu-bar))
+    (when (and (not (user-keys--sequence-mouse-p sequence))
                (> (length sequence) max-length))
       reason)))
 
@@ -794,6 +801,22 @@ The REASON will be returned for reporters."
         (-non-nil
          (--map (> (length (user-keys--real-kbd-mods it)) 1)
                 sequence))
+      reason)))
+
+(defun user-keys-expanding-modifiers-predicate (reason)
+  "Return predicate matching sequences with expanding modifiers.
+Expanding modifiers means that the current key uses modifiers
+that the previous key did not.  Entering these sequences requires
+a change or increase of modifiers.  A decrease of modifiers is
+allowed.  The REASON will be returned for reporters."
+  (lambda (sequence _)
+    (when
+        (and (not (user-keys--sequence-mouse-p sequence))
+             (let ((mods (--map (user-keys--real-kbd-mods it) sequence)))
+               (cadr (--reduce-r-from
+                      (list it (append (cadr acc)
+                                       (-difference (car acc) it)))
+                      (list (-last-item mods) nil) (-butlast mods)))))
       reason)))
 
 (defun user-keys-modifiers-predicate (modifiers reason)
@@ -853,6 +876,8 @@ The REASON will be returned for reporters."
         (user-keys-modifiers-predicate user-keys-stupid-modifiers
                                        "difficult modifiers")
         (user-keys-sequence-too-long-predicate 2 "sequence too long")
+        (user-keys-expanding-modifiers-predicate
+         "expanding modifiers")
         (user-keys-modified-basic-events-predicate
          user-keys-shifted-keys "modified shift keys"))
   "Predicates used to report stupid bindings."
