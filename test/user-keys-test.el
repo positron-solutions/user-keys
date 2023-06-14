@@ -291,16 +291,16 @@
 (ert-deftest user-keys--real-kbd-mods-test ()
   (should
    ;; strip phantom mod and obtain nothing
-   (equal (user-keys--real-kbd-mods (kbd "C-m")) nil))
+   (equal (user-keys--real-kbd-mods (aref (vconcat (kbd "C-m")) 0)) nil))
   (should
    ;; return correct modifiers after stripping phantom mod
-   (equal (user-keys--real-kbd-mods (kbd "C-M-[") '(meta))))
+   (equal (user-keys--real-kbd-mods (aref (vconcat (kbd "C-M-[")) 0)) '(meta)))
   (should
    ;; no modifiers, no problem
-   (equal (user-keys--real-kbd-mods (kbd "m")) nil))
+   (equal (user-keys--real-kbd-mods (aref (vconcat  (kbd "m")) 0)) nil))
   (should
    ;; don't remove non-phantom control
-   (equal (user-keys--real-kbd-mods (kbd "C-j")) '(control))))
+   (equal (user-keys--real-kbd-mods (aref (vconcat (kbd "C-j")) 0)) '(control))))
 
 (provide 'user-keys-test)
 ;;; user-keys-test.el ends here.
