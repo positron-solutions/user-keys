@@ -164,6 +164,7 @@ what the outputs mean in Emacs style key sequence notation."
 (defcustom user-keys-ignore-maps '(yank-menu
                                    xterm-function-map
                                    key-translation-map
+                                   custom-tool-bar-map ;; `keymapp', but not very keymap-ish
                                    ;; handled via special case of global map.
                                    ;; See `user-keys--find'.  Direct lookups in
                                    ;; the global map see a meta offset of the
