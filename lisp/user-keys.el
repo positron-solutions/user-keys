@@ -1054,19 +1054,19 @@ Use `helpful' package if loaded."
     (set-keymap-parent
      map
      (make-composed-keymap '(button-buffer-map special-mode-map)))
-    (define-key map "g" 'user-keys-refresh)
-    (define-key map "h" 'user-keys-dispatch)
-    (define-key map "?" 'user-keys-dispatch)
+    (define-key map (kbd "g") 'user-keys-refresh)
+    (define-key map (kbd "h") 'user-keys-dispatch)
+    (define-key map (kbd "?") 'user-keys-dispatch)
 
-    (define-key map "k" 'user-keys-set-sequence-key)
-    (define-key map "S" 'user-keys-set-sequence-string)
-    (define-key map "K" 'user-keys-set-sequence)
-    (define-key map "b" 'user-keys-set-target-buffer)
+    (define-key map (kbd "k") 'user-keys-set-sequence-key)
+    (define-key map (kbd "S") 'user-keys-set-sequence-string)
+    (define-key map (kbd "K") 'user-keys-set-sequence)
+    (define-key map (kbd "b") 'user-keys-set-target-buffer)
 
-    (define-key map "s" 'user-keys-report-shadows)
-    (define-key map "p" 'user-keys-report-preferred)
-    (define-key map "t" 'user-keys-report-stupid)
-    (define-key map "T" 'user-keys-report-unbinds)
+    (define-key map (kbd "s") 'user-keys-report-shadows)
+    (define-key map (kbd "p") 'user-keys-report-preferred)
+    (define-key map (kbd "t") 'user-keys-report-stupid)
+    (define-key map (kbd "T") 'user-keys-report-unbinds)
 
     ;; TODO different kinds of values could exist.  Function
     ;; keymaps are an example.
