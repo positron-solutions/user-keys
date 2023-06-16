@@ -341,7 +341,9 @@ are returned."
    (-non-nil
     (--map
      (-non-nil
-      (--map (kmu-keymap-variable (cdr it))
+      (--map (and (or (not active-only)
+                      (symbol-value(car it)))
+                   (kmu-keymap-variable (cdr it)))
              (if (symbolp it) (symbol-value it) it)))
      emulation-mode-map-alists))))
 
