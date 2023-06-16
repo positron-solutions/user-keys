@@ -43,10 +43,13 @@
 ;; implementation state and constants
 
 (defvar user-keys-sequence nil "Current sequence being analyzed.")
-
 (defvar user-keys-operation nil "Current analysis operation.")
-
-(defvar user-keys-target-buffer nil "Current buffer for inspecting bindings.")
+(defvar user-keys--target-buffer nil
+  "Current buffer for bindings inspection.")
+(defvar user-keys--target-mode nil
+  "Current major mode for bindings inspection.")
+(defvar user-keys--target-mode-temp-buffer nil
+  "Buffer used for inspecting bindings of arbitrary modes.")
 
 ;; TODO f-keys are not currently part of a predicate
 (defconst user-keys--fkey-events
@@ -280,16 +283,24 @@ that can be returned from `key-binding' and during
           (format "Bound to: %.20s..." str-binding)
         (format "Bound to: %s" str-binding))))))
 
+(defun user-keys--major-modes ()
+  "Return list of all major mode symbols."
+  (let* ((major-modes '(prog-mode text-mode special-mode)))
+    (mapatoms
+     (lambda (a) (when (get a 'derived-mode-parent)
+              (push a major-modes))))
+    major-modes))
+
 (defun user-keys--major-mode-keymaps ()
   "Return a list of major modes map symbols."
-  (let* ((major-mode-keymaps '())
-         (_ (mapatoms
-             (lambda (a) (when (get a 'derived-mode-parent)
-                      (let ((mode-map-name (derived-mode-map-name a)))
-                        (with-demoted-errors "user-keys major mode lookup: %S"
-                          (when (keymapp
-                                 (user-keys--symbol-to-map mode-map-name))
-                            (push mode-map-name major-mode-keymaps)))))))))
+  (let* ((major-mode-keymaps '()))
+    (mapatoms
+     (lambda (a) (when (get a 'derived-mode-parent)
+              (let ((mode-map-name (derived-mode-map-name a)))
+                (with-demoted-errors "user-keys major mode lookup: %S"
+                  (when (keymapp
+                         (user-keys--symbol-to-map mode-map-name))
+                    (push mode-map-name major-mode-keymaps)))))))
     major-mode-keymaps))
 
 (defun user-keys--minor-mode-keymaps (&optional active-only)
@@ -670,11 +681,13 @@ recursive plists."
          ;; First we want to see what bindings will be calculated.
          ;; This lookup doesn't tell us which map or why, but it does
          ;; tell us what the result will be.
-         (target-buffer (or user-keys-target-buffer
+         (target-buffer (or (and user-keys--target-mode
+                                 user-keys--target-mode-temp-buffer)
+                            user-keys--target-buffer
                             (current-buffer)))
 
          (local-lookups
-          (with-current-buffer target-buffer
+          (with-current-buffer target-buffer-or-mode
             (--map
              (let* ((sequences (cadr it))
                     (lookups
@@ -713,7 +726,7 @@ recursive plists."
          ;;                         :rows (user-keys--find it predicates))
          ;;                   active-map-symbols))
 
-         (report `(:title ,(format "Preferred Sequences in: %s" target-buffer)
+         (report `(:title ,(format "Preferred Sequences in: %s" target-buffer-or-mode)
                           :data ,local-lookups)))
     (user-keys--render-report report)))
 
@@ -961,20 +974,52 @@ intelligent over-design.  intelligently."
                                             'face 'success)
                               (propertize "none" 'face 'shadow))))
 
-(defun user-keys--describe-target-buffer ()
+(defun user-keys--describe-target-buffer-or-mode ()
   "Format's the current buffer for display as a group description."
-  (format "Target buffer: %s" (if user-keys-target-buffer
-                                (propertize
-                                 (buffer-name (get-buffer
-                                               user-keys-target-buffer))
-                                 'face 'success)
-                              (propertize "none" 'face 'shadow))))
+  (format "Target buffer: %s"
+          (cond
+           ((and user-keys--target-mode
+                 (symbolp user-keys--target-mode))
+            (propertize (symbol-name user-keys--target-mode)
+                        'face 'success))
+           ;; TODO this is always a buffer
+           ((or (bufferp user-keys--target-buffer)
+                (stringp user-keys--target-buffer))
+            (propertize (buffer-name
+                         (get-buffer user-keys--target-buffer))
+                        'face 'success))
+           (t  (propertize "none" 'face 'shadow)))))
 
 (defun user-keys-set-target-buffer (buffer)
   "Set the BUFFER  used for inspecting bindings.
-See `user-keys-target-buffer'."
+See `user-keys--target-buffer'."
   (interactive "bTarget buffer for binding inspection: ")
-  (setq user-keys-target-buffer buffer))
+  (when user-keys--target-mode-temp-buffer
+    (kill-buffer user-keys--target-mode-temp-buffer)
+    (setq user-keys--target-mode-temp-buffer nil)
+    (setq user-keys--target-mode nil))
+  (setq user-keys--target-buffer
+        (cond  ((bufferp buffer) buffer)
+               ((stringp buffer) (get-buffer buffer))
+               (t nil))))
+
+(defun user-keys-set-target-mode (mode)
+  "Create a buffer set to MODE and use it as the target."
+  (interactive (list (completing-read
+                      "Select major mode: "
+                      (user-keys--major-modes))))
+  (when user-keys--target-mode-temp-buffer
+    (kill-buffer user-keys--target-mode-temp-buffer)
+    (setq user-keys--target-mode-temp-buffer nil))
+
+  (let* ((name (concat (make-temp-name " *user-keys-") "*"))
+         (buffer (get-buffer-create name))
+         (mode (intern mode)))
+    (set-buffer buffer)
+    (funcall mode)
+    (setq user-keys--target-mode-temp-buffer buffer)
+    (setq user-keys--target-mode mode)
+    (setq user-keys--target-buffer nil)))
 
 (defun user-keys-set-sequence-key (key)
   "Set `user-keys-sequence' by inputting just one KEY.
@@ -1036,9 +1081,10 @@ because the input in the active maps is still a prefix."
      :transient t)
     ("K" "set sequence" user-keys-set-sequence :transient t)]
    [:description
-    user-keys--describe-target-buffer
+    user-keys--describe-target-buffer-or-mode
     ""
-    ("b" "active buffer" user-keys-set-target-buffer :transient t)]])
+    ("b" "active buffer" user-keys-set-target-buffer :transient t)
+    ("m" "mode" user-keys-set-target-mode :transient t)]])
 
 (declare-function helpful-at-point "helpful" ())
 (defun user-keys--push-button ()
@@ -1062,6 +1108,7 @@ Use `helpful' package if loaded."
     (define-key map (kbd "S") 'user-keys-set-sequence-string)
     (define-key map (kbd "K") 'user-keys-set-sequence)
     (define-key map (kbd "b") 'user-keys-set-target-buffer)
+    (define-key map (kbd "m") 'user-keys-set-target-mode)
 
     (define-key map (kbd "s") 'user-keys-report-shadows)
     (define-key map (kbd "p") 'user-keys-report-preferred)
