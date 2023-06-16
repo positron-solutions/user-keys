@@ -104,6 +104,10 @@ KEY-LETERS should be a list of chars or integers."
   :type 'string
   :group 'user-keys)
 
+(defcustom user-keys-allow-eager-package-loading t
+  "Can keymaps be loaded eagerly?"
+  :type 'boolean
+  :group 'user-keys)
 (defcustom user-keys-stupid-modifiers
   '(hyper super)
   "Sequences should almost never require these modifiers.
@@ -187,6 +191,13 @@ should just be ignored."
   :group 'user-keys)
 
 ;; implementation functions
+
+(defun user-keys--can-load-all-packages-p ()
+  "Ask nicely to load unless we likely already forced all loading."
+  (or user-keys-allow-eager-package-loading
+      (setq user-keys-allow-eager-package-loading
+            (yes-or-no-p
+             "This could result in a lot of package loading.  Continue?"))))
 
 (defun user-keys--get-buffer ()
   "Obtain the report buffer."
@@ -812,12 +823,6 @@ MAPS is a list of `(SECTION MAP)' forms.  See
              :header section
              :rows data))))))))
 
-(defun user-keys-generate-unbinds (output-type)
-  "Generate an unbinding expression for OUTPUT-TYPE."
-  (interactive)
-
-  (undefined))
-
 ;; functions useful for those extending user-keys, part of external API
 
 (defun user-keys-key-predicate (key reason)
@@ -1027,6 +1032,12 @@ The key does not need to be bound in any active maps."
   (interactive (list (read-key "Enter a key: ")))
   (setq user-keys-sequence (vector key)))
 
+(defun user-keys-report-unbinds ()
+  "Show the unbinding state versus persisted state."
+  (interactive)
+  (unless (user-keys--can-load-all-packages-p)
+    (undefined)))
+
 (defun user-keys-set-sequence (sequence)
   "Set the SEQUENCE to analyze for buffer or mode maps.
 The sequence needs to be bound.  Incomplete sequences will
@@ -1063,14 +1074,15 @@ because the input in the active maps is still a prefix."
 ;;;###autoload
 (transient-define-prefix user-keys-dispatch ()
   "Controls for user-keys package."
-  [["Generate Report"
-    ("s" "sequence shadows report" user-keys-report-shadows)
-    ("p" "preferred sequences report" user-keys-report-preferred)
-    ("t" "stupid sequences report" user-keys-report-stupid)
-    ("T" "unbinds" user-keys-generate-unbinds)]
+  [["Inspection & Unbinding"
+    ("s" "sequence shadows" user-keys-report-shadows :transient t)
+    ("p" "preferred sequences" user-keys-report-preferred :transient t)
+    ""
+    ("t" "stupid sequences" user-keys-report-stupid :transient t)
+    ("u" "unbinding" user-keys-report-unbinds :transient t)]
    ["Controls"
     ("h" "toggle menu" transient-quit-one)
-    ("g" "refresh" user-keys-refresh)]]
+    ("g" "refresh" user-keys-refresh :transient t)]]
   ["Options"
    [:description
     user-keys--describe-current-sequence
