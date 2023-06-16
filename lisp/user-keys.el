@@ -137,7 +137,7 @@ events and modifiers."
        ,(user-keys-meta-ize other-meta))
       (,(propertize "ctl keys\n" 'face 'font-lock-string-face)
        ,(user-keys-ctl-fy other-ctl))))
-  "Sequences to look report in `user-keys-report-preferred'.
+  "Sequences to look up in `user-keys-report-preferred'.
 Set to an expression or function that returns a list of elements.
 Each element is a string and a list of key sequence vectors or a
 function that will return such a list.
@@ -751,6 +751,9 @@ MAPS is a list of `(SECTION MAP)' forms.  See
                          (call-interactively
                           #'user-keys-set-sequence-key))))
 
+  ;; TODO support active maps etc
+  ;; Especially for shadows, a lot of maps in "other maps" are not even
+  ;; reachable.
   (let* (;; `keymap-lookup' uses string input.  `lookup-key' doc string
          ;; says to prefer `keymap-lookup'.
          (key-str (key-description sequence))
@@ -765,7 +768,7 @@ MAPS is a list of `(SECTION MAP)' forms.  See
                               maps))
                  (lookups
                   (->> maps
-                       (--map ; it is a single map symbol
+                       (--map           ; it is a single map symbol
                         (let ((binding (with-demoted-errors
                                            "couldn't get keymap for symbol %s"
                                          (keymap-lookup
