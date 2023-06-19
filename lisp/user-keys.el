@@ -754,41 +754,39 @@ MAPS is a list of `(SECTION MAP)' forms.  See
   ;; TODO support active maps etc
   ;; Especially for shadows, a lot of maps in "other maps" are not even
   ;; reachable.
-  (let* (;; `keymap-lookup' uses string input.  `lookup-key' doc string
-         ;; says to prefer `keymap-lookup'.
-         (key-str (key-description sequence))
-         (data
-          (->>
-           (or maps (user-keys--default-maps))
-           (--map
-            (-when-let*
-                (((section maps) it)
-                 (maps (-sort (lambda (l r) (string< (symbol-name l)
-                                                (symbol-name r)))
-                              maps))
-                 (lookups
-                  (->> maps
-                       (--map           ; it is a single map symbol
-                        (let ((binding (with-demoted-errors
-                                           "couldn't get keymap for symbol %s"
-                                         (keymap-lookup
-                                          (user-keys--symbol-to-map it)
-                                          key-str))))
-                          (when binding
-                            (list (user-keys--maybe-button it)
-                                  (user-keys--describe-binding binding)))))
-                       (-non-nil))))
+  ;; TODO remember to show that predicates need t for "just any reason"
+  (let ((predicates (list (user-keys-sequences-predicate (list sequence) t))))
+    (user-keys--render-report
+     `(:title
+       ,(format "Shadows for %s" (propertize (key-description sequence)
+                                             'face 'success))
+       :data
+       ,(->>
+         (user-keys--default-maps)
+         (-map
+          (-lambda ((section maps))
+            (when-let
+                ((data (->>
+                        maps
+                        (--map
+                         (when-let
+                             ((keymap-symbol it)
+                              (keymap (user-keys--symbol-to-map it))
+                              (scanned (car (user-keys--find
+                                             keymap
+                                             predicates)))
+                              (display (--map
+                                        (list
+                                         (key-description (nth 0 it))
+                                         (user-keys--describe-binding (nth 1 it))
+                                         (user-keys--maybe-button keymap-symbol))
+                                        scanned)))
+                           display))
+                        (-non-nil)
+                        (-flatten-n 1))))
               (list
                :header section
-               :rows lookups)))
-           (-non-nil)))
-
-         (report `(:title
-                   ,(format
-                     "Shadows for %s"
-                     (propertize key-str 'face 'success))
-                   :data ,data)))
-    (user-keys--render-report report)))
+               :rows data)))))))))
 
 (defun user-keys-report-stupid ()
   "Show all of the stupid key sequences that are currently bound."
