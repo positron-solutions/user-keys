@@ -190,11 +190,20 @@ what the outputs mean in Emacs style key sequence notation."
                                    ;; usually a clone of the global map.  We
                                    ;; will need to optionally filter maps when
                                    ;; looking at a buffer
+                                   global-buffers-menu-map ; dynamic
                                    widget-global-map)
-  "Some maps are simultaneously very weird and not very useful.
-In particular, maps that cause errors because of, for example,
-failing the `keymapp' test after autoloaded but not before,
-should just be ignored."
+  "Maps that are not useful for declarative binding statement generation.
+Either they are special case, will generate broken bindings, or
+will just error during generation.
+
+Generation of bindings for dynamic maps such as
+`global-buffers-menu-map' will not be valid between restarts.
+
+Special case maps such as `esc-map' are handled via other maps.
+
+Some maps are simultaneously very weird and not very useful.  In
+particular, some maps may pass `keymapp' before being autoloaded
+but are not a valid keymap after loading."
   :type '(repeat symbol)
   :group 'user-keys)
 
