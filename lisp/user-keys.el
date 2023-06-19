@@ -1159,6 +1159,20 @@ because the input in the active maps is still a prefix."
    sequence t)
   (user-keys-report-shadows))
 
+(defun user-keys-regenerate-unbinds (&optional just-do-it)
+  "Re-generate unbinds from the current configuration.
+When optional JUST-DO-IT or non-nil prefix argument, attempt to
+regenerate without any user interaction."
+  (interactive "p")
+  (unless (or just-do-it
+              (user-keys--can-load-all-packages-p))
+    (undefined)))
+
+(defun user-keys-report-unbinds ()
+  "Show the unbinding state versus persisted state."
+  (interactive)
+  (unless (user-keys--can-load-all-packages-p)
+    (undefined)))
 
 (defun user-keys-refresh ()
   "Refresh the results buffer."
