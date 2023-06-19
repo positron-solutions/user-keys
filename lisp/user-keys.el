@@ -599,7 +599,9 @@ easier design and debugging of rules."
                   (user-keys--normalize-sequence
                    (user-keys--maybe-unroll sequence))
                 (error
-                 (message "user-keys: sequence processed raw: %s" sequence)
+                 (message "user-keys: sequence in map %s processed raw: %s"
+                          (kmu-keymap-variable keymap)
+                          sequence)
                  sequence)))
              (exclusions (-non-nil (--map
                                     (funcall it sequence definition)
