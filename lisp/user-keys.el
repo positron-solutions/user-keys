@@ -710,7 +710,7 @@ recursive plists."
                             (current-buffer)))
 
          (local-lookups
-          (with-current-buffer target-buffer-or-mode
+          (with-current-buffer target-buffer
             (--map
              (let* ((sequences (cadr it))
                     (lookups
@@ -749,7 +749,7 @@ recursive plists."
          ;;                         :rows (user-keys--find it predicates))
          ;;                   active-map-symbols))
 
-         (report `(:title ,(format "Preferred Sequences in: %s" target-buffer-or-mode)
+         (report `(:title ,(format "Preferred Sequences in: %s" (buffer-name target-buffer))
                           :data ,local-lookups)))
     (user-keys--render-report report)))
 
