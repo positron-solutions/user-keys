@@ -869,18 +869,28 @@ The REASON will be returned for reporters.
 
 Basic events are a list, and for mouse events for example, can contain
 multiple elements."
-  (lambda (sequence _)
-    (when (-non-nil
-           (--map (seq-contains-p basic-events (event-basic-type it))
-                  sequence))
-      reason)))
+  (if (equal (length basic-events) 1)
+      (let ((basic-event (car basic-events)))
+        (lambda (sequence _)
+          (when (-non-nil (--map (equal basic-event (event-basic-type it))
+                                 sequence))
+            reason)))
+    (lambda (sequence _)
+      (when (-non-nil
+             (--map (seq-contains-p basic-events (event-basic-type it))
+                    sequence))
+        reason))))
 
 (defun user-keys-sequences-predicate (sequences reason)
   "Return a predicate that matches any sequence from SEQUENCES.
 The REASON will be returned for reporters."
-  (lambda (sequence _)
-    (message "sequence: %s" sequence)
-    (when (member sequence sequences) reason)))
+  (if (equal (length sequences) 1)
+      ;; TODO add single and multiple sequences to test
+      (let ((target (car sequences)))
+        (lambda (sequence _)
+          (when (equal sequence target) reason)))
+    (lambda (sequence _)
+      (when (member sequence sequences) reason))))
 
 (defun user-keys-sequence-too-long-predicate (max-length reason)
   "Return predicate matching sequences with too many keys.
