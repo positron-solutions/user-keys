@@ -44,6 +44,14 @@
 
 (defvar user-keys-sequence nil "Current sequence being analyzed.")
 (defvar user-keys-operation nil "Current analysis operation.")
+;; TODO make all keys generate a predicate and set description
+(defvar user-keys-shadows-predicate nil
+  "Matching predicate for shadows reports.")
+;; TODO replace the description in commands that set the predicate
+(defvar user-keys--shadows-match-description nil
+  "Description for `user-keys--shadows-predicate`.")
+(defvar user-keys--shadows-exact t
+  "Is the predicate going to match one sequence or multiple per map?")
 (defvar user-keys--target-buffer nil
   "Current buffer for bindings inspection.")
 (defvar user-keys--target-mode nil
@@ -743,26 +751,34 @@ recursive plists."
                           :data ,local-lookups)))
     (user-keys--render-report report)))
 
-(defun user-keys-report-shadows (sequence &optional maps)
-  "Show all keymaps that potentially could shadow SEQUENCE.
-MAPS is a list of `(SECTION MAP)' forms.  See
-`user-keys--default-maps'."
-  (interactive (list (or user-keys-sequence
-                         (call-interactively
-                          #'user-keys-set-sequence-key))))
+(defun user-keys-report-shadows (&optional multiple)
+  "Show all keys that match `user-keys-shadows-predicate'.
+This function is called by transient suffixes that have updated
+the configuration state.  The state is read by this routine.
+
+Optional MULTIPLE argument toggles multi-match logic.
+
+The following states affect behavior:
+`user-keys--shadows-predicate'
+`user-keys--shadows-exact'"
+  ;; TODO `user-keys--maps'
+
+  ;; TODO refactor shadows and preferred to just set display, report contents,
+  ;; and predicates
 
   ;; TODO support active maps etc
   ;; Especially for shadows, a lot of maps in "other maps" are not even
   ;; reachable.
+
   ;; TODO remember to show that predicates need t for "just any reason"
-  (let ((predicates (list (user-keys-sequences-predicate (list sequence) t))))
+  (let ((predicates (list user-keys-shadows-predicate))
+        (maps (user-keys--default-maps)))
     (user-keys--render-report
      `(:title
-       ,(format "Shadows for %s" (propertize (key-description sequence)
-                                             'face 'success))
+       ,(user-keys--shadows-predicate-description)
        :data
        ,(->>
-         (user-keys--default-maps)
+         maps
          (-map
           (-lambda ((section maps))
             (when-let
@@ -770,23 +786,33 @@ MAPS is a list of `(SECTION MAP)' forms.  See
                         maps
                         (--map
                          (when-let
-                             ((keymap-symbol it)
+                             ((keymap-button (user-keys--maybe-button it))
                               (keymap (user-keys--symbol-to-map it))
                               (scanned (car (user-keys--find
                                              keymap
                                              predicates)))
                               (display (--map
-                                        (list
-                                         (key-description (nth 0 it))
-                                         (user-keys--describe-binding (nth 1 it))
-                                         (user-keys--maybe-button keymap-symbol))
+                                        (if multiple
+                                            (list
+                                             (key-description (nth 0 it))
+                                             (user-keys--describe-binding (nth 1 it)))
+                                          (list
+                                           (key-description (nth 0 it))
+                                           (user-keys--describe-binding (nth 1 it))
+                                           keymap-button))
                                         scanned)))
-                           display))
-                        (-non-nil)
-                        (-flatten-n 1))))
+                           (if multiple
+                               (when display
+                                 (list
+                                  :header keymap-button
+                                  :rows display))
+                             display)))
+                        (-non-nil))))
               (list
                :header section
-               :rows data)))))))))
+               :rows (if multiple data
+                       (-flatten-n 1 data))))))
+         (-non-nil))))))
 
 (defun user-keys-report-stupid ()
   "Show all of the stupid key sequences that are currently bound."
@@ -911,6 +937,16 @@ The REASON will be returned for reporters."
                   sequence))
       reason)))
 
+(defun user-keys-starts-with-key-or-modified (key reason)
+  "Return a predicate matching leading KEY or KEY with modifiers.
+This is the predicate used in `user-keys-shadows-key-or-modified'
+to enable showing all leading usages of key.  The REASON will be
+returned for reporters."
+  (let ((match-event (event-basic-type key)))
+    (lambda (sequence _)
+      (when (equal (event-basic-type (aref sequence 0)) match-event)
+        reason))))
+
 (defun user-keys-one-mod-events-predicate (modifiers
                                            basic-events reason)
   "Return a predicate matching single MODIFIERS and BASIC-EVENTS.
@@ -974,13 +1010,32 @@ intelligent over-design.  intelligently."
 
 ;; user commands and modes
 
-(defun user-keys--describe-current-sequence ()
-  "Format's the current sequence for display as a group description."
-  (format "Current key: %s" (if user-keys-sequence
-                                (propertize (key-description
-                                             user-keys-sequence)
-                                            'face 'success)
-                              (propertize "none" 'face 'shadow))))
+(defun user-keys--shadows-set-match-description (sequence &optional exact)
+  "Generate meaningful description of SEQUENCE.
+If matching EXACT, say so."
+  (setq user-keys--shadows-match-description
+        (let ((shadows (propertize "Shadows" 'face 'transient-heading)))
+          (if sequence
+              (let ((seq-desc (propertize (key-description
+                                           sequence)
+                                          'face 'success)))
+                (if exact (format "%s - exact match: %s" shadows seq-desc )
+                  (format "%s - match key or modified: %s" shadows seq-desc)))
+            shadows))))
+
+(defun user-keys--shadows-predicate-description ()
+  "Description function for shadows group."
+  user-keys--shadows-match-description)
+
+(defun user-keys--describe-maps ()
+  "Format current map selection for display as group description."
+  ;; implement
+  "good maps")
+
+(defun user-keys--describe-predicates ()
+  "Format current predicates selection for display as a group description."
+  ;; implement
+  "good predicates")
 
 (defun user-keys--describe-target-buffer-or-mode ()
   "Format's the current buffer for display as a group description."
@@ -1029,30 +1084,49 @@ See `user-keys--target-buffer'."
     (setq user-keys--target-mode mode)
     (setq user-keys--target-buffer nil)))
 
-(defun user-keys-set-sequence-key (key)
-  "Set `user-keys-sequence' by inputting just one KEY.
+(defun user-keys-shadows-key-or-modified (key &optional match-unmodified)
+  "Show all sequences containing or shadowing KEY.
+Key can be a modified or unmodified key.  If the key is modified,
+the user will be asked if they want to include unmodified matches
+as well, which is analogous to setting optional MATCH-UNMODIFIED."
+  (interactive (let ((key  (read-key "Enter a key: ")))
+                 (if (event-modifiers key)
+
+                     ;; TODO unmodified is not supported yet
+                     (list key (y-or-n-p "Match unmodified?"))
+                   (list key t))))
+  (let ((sequence (vector key)))
+    (setq user-keys-shadows-predicate
+          (user-keys-starts-with-key-or-modified key t))
+    (user-keys--shadows-set-match-description
+     sequence nil)
+    (user-keys-report-shadows t)))
+
+(defun user-keys-shadows-key (key)
+  "Report maps that shadow KEY.
 The key does not need to be bound in any active maps."
   (interactive (list (read-key "Enter a key: ")))
-  (setq user-keys-sequence (vector key)))
+  (let ((sequence (vector key)))
+    (setq user-keys-shadows-predicate
+          (user-keys-sequences-predicate (list (vector key)) t))
+    (user-keys--shadows-set-match-description
+     sequence t)
+    (user-keys-report-shadows)))
 
-(defun user-keys-report-unbinds ()
-  "Show the unbinding state versus persisted state."
-  (interactive)
-  (unless (user-keys--can-load-all-packages-p)
-    (undefined)))
-
-(defun user-keys-set-sequence (sequence)
+(defun user-keys-shadows-sequence (sequence)
   "Set the SEQUENCE to analyze for buffer or mode maps.
 The sequence needs to be bound.  Incomplete sequences will
-continue reading.  TODO This seems to behave differently when
-called within transient versus directly.  The transient menu has
-different maps active."
+continue reading.  TODO This seems to behave differently when called within
+transient versus directly.  The transient menu has different maps
+active."
   (interactive (list (read-key-sequence-vector "Bound key sequence: ")))
-  (setq user-keys-sequence sequence)
-  ;; there's no feedback when a sequence terminates
-  (message "Sequence set!"))
+  (setq user-keys-shadows-predicate
+        (user-keys-sequences-predicate (list sequence) t))
+  (user-keys--shadows-set-match-description
+   sequence t)
+  (user-keys-report-shadows))
 
-(defun user-keys-set-sequence-string (sequence)
+(defun user-keys-shadows-sequence-string (sequence)
   "Set the SEQUENCE, but use a string input.
 This can be useful when `read-key-sequence' will not terminate input
 because the input in the active maps is still a prefix."
@@ -1063,11 +1137,16 @@ because the input in the active maps is still a prefix."
                (if (with-demoted-errors
                        "`kbd' failed for input: %s"
                        (kbd input))
-                   (setq sequence (kbd input))
+                   (setq sequence (vconcat (kbd input)))
                  (message "Input must be valid argument to call `kbd' function.")
                  (sit-for 3))))
            sequence)))
-  (setq user-keys-sequence sequence))
+  (setq user-keys-shadows-predicate
+        (user-keys-sequences-predicate (list sequence) t))
+  (user-keys--shadows-set-match-description
+   sequence t)
+  (user-keys-report-shadows))
+
 
 (defun user-keys-refresh ()
   "Refresh the results buffer."
@@ -1077,24 +1156,24 @@ because the input in the active maps is still a prefix."
 ;;;###autoload
 (transient-define-prefix user-keys-dispatch ()
   "Controls for user-keys package."
+  :transient-non-suffix t
   [["Inspection & Unbinding"
-    ("s" "sequence shadows" user-keys-report-shadows :transient t)
     ("p" "preferred sequences" user-keys-report-preferred :transient t)
     ""
     ("t" "stupid sequences" user-keys-report-stupid :transient t)
     ("u" "unbinding" user-keys-report-unbinds :transient t)]
    ["Controls"
     ("h" "toggle menu" transient-quit-one)
-    ("g" "refresh" user-keys-refresh :transient t)]]
-  ["Options"
+    ("g" "refresh" user-keys-refresh :transient t)]
    [:description
-    user-keys--describe-current-sequence
+    user-keys--shadows-predicate-description
     ""
-    ("k" "set sequence (key)" user-keys-set-sequence-key :transient t)
+    ("o" "key or modified" user-keys-shadows-key-or-modified :transient t)
+    ("k" "key" user-keys-shadows-key :transient t)
+    ("K" "sequence" user-keys-shadows-sequence :transient t)
     ;; setting the sequence with `kbd' doesn't depend on active maps.
-    ("S" "set sequence (string)" user-keys-set-sequence-string
-     :transient t)
-    ("K" "set sequence" user-keys-set-sequence :transient t)]
+    ("S" "sequence (string)" user-keys-shadows-sequence-string
+     :transient t)]]
    [:description
     user-keys--describe-target-buffer-or-mode
     ""
@@ -1115,20 +1194,21 @@ Use `helpful' package if loaded."
     (set-keymap-parent
      map
      (make-composed-keymap '(button-buffer-map special-mode-map)))
-    (define-key map (kbd "g") 'user-keys-refresh)
-    (define-key map (kbd "h") 'user-keys-dispatch)
-    (define-key map (kbd "?") 'user-keys-dispatch)
+    (define-key map (kbd "g") #'user-keys-refresh)
+    (define-key map (kbd "h") #'user-keys-dispatch)
+    (define-key map (kbd "?") #'user-keys-dispatch)
 
-    (define-key map (kbd "k") 'user-keys-set-sequence-key)
-    (define-key map (kbd "S") 'user-keys-set-sequence-string)
-    (define-key map (kbd "K") 'user-keys-set-sequence)
-    (define-key map (kbd "b") 'user-keys-set-target-buffer)
-    (define-key map (kbd "m") 'user-keys-set-target-mode)
+    (define-key map (kbd "o") #'user-keys-shadows-key-or-modified)
+    (define-key map (kbd "k") #'user-keys-shadows-key)
+    (define-key map (kbd "K") #'user-keys-shadows-sequence)
+    (define-key map (kbd "s") #'user-keys-shadows-sequence-string)
 
-    (define-key map (kbd "s") 'user-keys-report-shadows)
-    (define-key map (kbd "p") 'user-keys-report-preferred)
-    (define-key map (kbd "t") 'user-keys-report-stupid)
-    (define-key map (kbd "T") 'user-keys-report-unbinds)
+    (define-key map (kbd "b") #'user-keys-set-target-buffer)
+    (define-key map (kbd "m") #'user-keys-set-target-mode)
+
+    (define-key map (kbd "p") #'user-keys-report-preferred)
+    (define-key map (kbd "t") #'user-keys-report-stupid)
+    (define-key map (kbd "u") #'user-keys-report-unbinds)
 
     ;; TODO different kinds of values could exist.  Function
     ;; keymaps are an example.
